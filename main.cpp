@@ -1,6 +1,7 @@
 
 #include "tgaimage.h"
 #include <iostream>
+#include <cstdlib>
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
@@ -21,65 +22,140 @@ class Vec2 {
 		}
 };
 
+typedef Vec2 Point;
+
+void plotLineLow(Point a, Point b, TGAImage &image) {
+	// Used when slope is horizontal than vertical
+	// i.e. delta X > delta Y
+
+	std::cout << "plotLineLow\n";
+	int dx = b.x - a.x;
+	int dy = b.y - a.y;
+	int yi = 1;
+
+	if (dy < 0) {
+		yi = -1;
+		dy = -dy;
+	}
+
+	int D = 2*dy - dx;
+	int y = a.y;
+
+	for (int x=a.x; x<=b.x; x++) {
+		image.set(x, y, green);
+
+		if (D > 0) {
+			y += yi;
+			D += 2 * (dy - dx);
+		}
+		else {
+			D += 2 * dy;
+		}
+	}
+}
+
+void plotLineHigh(Point a, Point b, TGAImage &image) {
+	// Used when slope is more vertical than horizontal
+	// i.e. delta Y > delta X
+	int dx = b.x - a.x;
+	int dy = b.y - a.y;
+	int xi = 1;
+	if (dx < 0) {
+		xi = -1;
+		dx = -dx;
+	}
+
+	int D = 2*dy - dx;
+	int x = a.x;
+	for (int y=a.y; y<=b.y; y++) {
+		image.set(x, y, red);
+		if (D > 0) {
+			x += xi;
+			D += 2 * (dx - dy);
+		}
+		else {
+			D += 2 * dx;
+		}
+	}
+}
+
+void plotLine(Point a, Point b, TGAImage &image) {
+	if (abs(b.y - a.y) < abs(b.x - a.x)) {
+		if (a.x > b.x) {
+			plotLineLow(b, a, image);
+		}
+		else {
+			plotLineLow(a, b, image);
+		}
+	}
+
+	else {
+		if (a.y > b.y) {
+			plotLineHigh(b, a, image);
+		}
+		else {
+			plotLineHigh(a, b, image);
+		}
+
+	}
+}
+
+// void plotLine(TGAImage &image, Vec2 a, Vec2 b) {
+// 	// Plot line using Bresenham's
+
+
+// 	int dx = b.x - a.x;
+// 	int dy = b.y - a.y;
+// 	int y = a.y;
+// 	int D = 2*dy - dx;
+
+// 	for (int x=a.x; x<=b.x; x++) {
+// 		image.set(x, y, green);
+
+// 		if (D > 0) {
+// 			y++;
+// 			D -= 2*dx;
+// 		}
+// 		D += 2*dy;
+// 	}
+// }
+
+Point makeNormalizedPoint(int width, int height, float x, float y) {
+	Point p(width * x, height * y);
+	return p;
+}
+
+void plotLine(float x0, float y0, float x1, float y1, bool normalized, TGAImage &image) {
+	if (normalized) {
+		if (x0 > 1.0 || y0 > 1.0 || x1 > 1.0 || y1 > 1.0) {
+			std::cerr << "ERROR: Normalized values for plotLine are outside of valid range. Expect some weird shit" << std::endl;
+		}
+		x0 = x0 * image.get_width();
+		y0 = y0 * image.get_height();
+		x1 = x1 * image.get_width();
+		y1 = y1 * image.get_height();
+	}
+	plotLine(Point(x0, y0), Point(x1, y1), image);
+}
 
 int main(int argc, char** argv) {
-	std::cout << "hello" << std::endl;
-	int width = 500;
-	int height = 500;
+	int width = 1000;
+	int height = 1000;
 	TGAImage image(width, height, TGAImage::RGB);
 	for (int x=0; x<width; x++) {
 		for (int y=0; y<height; y++) {
 			image.set(x, y, white);
 		}
 	}
-	image.set(52, 41, red);
 
 
-	Vec2 upperLeft(20, 20);
-	Vec2 upperRight(40, 20);
-	Vec2 lowerLeft(20, 40);
-	Vec2 lowerRight(40, 40);
+	plotLine(.49, .5, .5, .75, true, image);
+	plotLine(.5, .5, .75, .5, true, image);
+	plotLine(.75, .75, .75, .5, true, image);
+	plotLine(.5, .75, .75, .75, true, image);
 
-
-
-	// Draw top line
-	// for (int x=upperLeft.x; x<=upperRight.x; x++) {
-	// 	image.set(x, upperRight.y, green);
-	// }
-	// // Draw lower line
-	// for (int x=lowerLeft.x; x<=lowerRight.x; x++) {
-	// 	image.set(x, lowerRight.y, green);
-	// }
-	// // Draw left line
-	// for (int y=upperLeft.y; y<=lowerLeft.y; y++) {
-	// 	image.set(lowerLeft.x, y, green);
-	// }
-	// // Draw right line
-	// for (int y=upperRight.y; y<=lowerRight.y; y++) {
-	// 	image.set(lowerRight.x, y, green);
-	// }
-
-
-	// Vec2 a()
-
-	// Plot line using Bresenham's
-	Vec2 a(250, 250);
-	Vec2 b(400, 300);
-
-	int dx = b.x - a.x;
-	int dy = b.y - a.y;
-	int y = a.y;
-	int D = 2*dy - dx;
-
-	for (int x=a.x; x<=b.x; x++) {
-		image.set(x, y, green);
-
-		if (D > 0) {
-			y++;
-			D -= 2*dx;
-		}
-		D += 2*dy;
-	}
+	plotLine(0.2, 0.2, 0.4, 0.6, true, image);
+	plotLine(0.4, 0.6, 0.6, 0.2, true, image);
 
 
 

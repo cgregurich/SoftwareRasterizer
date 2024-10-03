@@ -1,4 +1,7 @@
-WILO from 10/2 in remarkable. Check out Bresenham's video by NoBS Code!! Looks like it has really good animations
+WILO 10/3:
+Implemented Bresenhams so now I can draw any line.
+* Work on understanding all three functions since they're a bit different from the original, and you didn't understand the original perfecttly either.
+* Look into if it's normal for Bresenham to not draw vertical lines very well? Seems the second pixel drawn after (x0, y0) is always a diagonal point rather than straight down? Probably an implementation issue, I would think?
 
 
 Apparently a software rasterizer needs four things:
