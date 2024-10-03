@@ -1,3 +1,6 @@
+WILO from 10/2 in remarkable. Check out Bresenham's video by NoBS Code!! Looks like it has really good animations
+
+
 Apparently a software rasterizer needs four things:
 * Matrix math (to project triangles/vertices in 3D space onto the 2D screen)
 * A clipping algorithm which rejects triangles that are offscreen and clips the onscreen ones against the screen boundaries
