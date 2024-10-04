@@ -43,6 +43,7 @@ void plotLineLow(Point a, Point b, TGAImage &image) {
 
 	for (int x=a.x; x<=b.x; x++) {
 		image.set(x, y, green);
+        
 
 		if (D > 0) {
 			y += yi;
