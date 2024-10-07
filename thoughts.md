@@ -1,14 +1,16 @@
-WILO 10/3:
-Implemented Bresenhams so now I can draw any line.
-* Work on understanding all three functions since they're a bit different from the original, and you didn't understand the original perfectly either.
-* Look into if it's normal for Bresenham to not draw vertical lines very well? Seems the second pixel drawn after (x0, y0) is always a diagonal point rather than straight down? Probably an implementation issue, I would think?
+WILO: 10/7
+Implementing filling a triangle so I can manually draw a 3D cube, for example. And just remembered that I could refer to TinyRenderer for ideas of
+what to do next! Haha
 
-WILO: 10/6: why does vertical line not work correctly?????
+Other next steps:
+* Barycentric coordinates for interpolating colors in a triangle (add color data to vertices?)
+* Dig more into the math & intuition behind the implementation of filling the triangles. Why do you need to subtract vectors to get the vector from A to B, why cross product, what is a cross product, what does it mean geometrically, etc.?
 
 
 ## Problems Tackled
 * Implemented line drawing using Bresenham's Line Drawing Algorithm
 * Figured out why vertical line wasn't being drawn correctly: had dx and dy swapped in one calculation in plotLineHigh
+* Implemented filling a triangle
 
 
 
