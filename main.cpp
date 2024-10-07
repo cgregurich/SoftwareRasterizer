@@ -3,164 +3,131 @@
 #include <iostream>
 #include <cstdlib>
 
-const TGAColor white = TGAColor(255, 255, 255, 255);
-const TGAColor red   = TGAColor(255, 0,   0,   255);
-const TGAColor green = TGAColor(40,   200, 100,   255);
+const TGAColor white(255, 255, 255, 255);
+const TGAColor red(255, 0,   0,   255);
+const TGAColor green(40,   200, 100,   255);
+const TGAColor purple(127,   0, 127,   255);
+#define WIDTH 100
+#define HEIGHT 100
+TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
 
 
 class Vec2 {
 	public:
-		int x;
-		int y;
-		
+        float x;
+        float y;
 
 		Vec2() : x(x), y(x) {
-
 		}
-		Vec2(int x, int y) : y(y), x(x) {
-
+		Vec2(float x, float y) : y(y), x(x) {
 		}
+
 };
 
 typedef Vec2 Point;
 
-void plotLineLow(Point a, Point b, TGAImage &image) {
-	// Used when slope is horizontal than vertical
-	// i.e. delta X > delta Y
+class Triangle {
+    public:
+        Point p0;
+        Point p1;
+        Point p2;
+        bool areNormalized;
 
-	std::cout << "plotLineLow\n";
-	int dx = b.x - a.x;
-	int dy = b.y - a.y;
-	int yi = 1;
+        Triangle(Point p0, Point p1, Point p2) : p0(p0), p1(p1), p2(p2) {
 
-	if (dy < 0) {
-		yi = -1;
-		dy = -dy;
-	}
+        }
 
-	int D = 2*dy - dx;
-	int y = a.y;
+        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, bool areNormalized) {
+            p0 = Point(x0, y0);
+            p1 = Point(x1, y1);
+            p2 = Point(x2, y2);
+            this->areNormalized = areNormalized;
+        }
+};
 
-	for (int x=a.x; x<=b.x; x++) {
-		image.set(x, y, green);
-        
 
-		if (D > 0) {
-			y += yi;
-			D += 2 * (dy - dx);
-		}
-		else {
-			D += 2 * dy;
-		}
-	}
+void drawLine(Point a, Point b, bool areNormalized) {
+    // This version does everything in one function
+    // instead of using helper functions for high vs low lines
+
+    if (areNormalized) {
+        a.x *= image.get_width();
+        a.y *= image.get_height();
+        b.x *= image.get_width();
+        b.y *= image.get_height();
+    }
+
+    int x0, x1, y0, y1;
+    x0 = a.x;
+    y0 = a.y;
+    x1 = b.x;
+    y1 = b.y;
+    int dx = abs(x1 - x0);
+    int sx = x0 < x1 ? 1 : -1;
+    int dy = -abs(y1 - y0);
+    int sy = y0 < y1 ? 1 : -1;
+    int error = dx + dy;
+
+    int x = x0;
+    int y = y0;
+
+    while (true) {
+        image.set(x, y, purple);
+        if (x == x1 && y == y1) break;
+        int e2 = 2 * error;
+        if (e2 >= dy) {
+            error += dy;
+            x += sx;
+        }
+        if (e2 <= dx) {
+            error += dx;
+            y += sy;
+        }
+    }
 }
 
-void plotLineHigh(Point a, Point b, TGAImage &image) {
-	// Used when slope is more vertical than horizontal
-	// i.e. delta Y > delta X
-	int dx = b.x - a.x;
-	int dy = b.y - a.y;
-	int xi = 1;
-	if (dx < 0) {
-		xi = -1;
-		dx = -dx;
-	}
-
-	int D = 2*dy - dx;
-	int x = a.x;
-	for (int y=a.y; y<=b.y; y++) {
-		image.set(x, y, red);
-		if (D > 0) {
-			x += xi;
-			D += 2 * (dx - dy);
-		}
-		else {
-			D += 2 * dx;
-		}
-	}
+void drawLine(float x0, float y0, float x1, float y1, bool areNormalized) {
+	drawLine(Point(x0, y0), Point(x1, y1), areNormalized);
 }
 
-void plotLine(Point a, Point b, TGAImage &image) {
-	if (abs(b.y - a.y) < abs(b.x - a.x)) {
-		if (a.x > b.x) {
-			plotLineLow(b, a, image);
-		}
-		else {
-			plotLineLow(a, b, image);
-		}
-	}
-
-	else {
-		if (a.y > b.y) {
-			plotLineHigh(b, a, image);
-		}
-		else {
-			plotLineHigh(a, b, image);
-		}
-
-	}
+void setBackgroundColor(TGAColor color) {
+    for (int x=0; x<=image.get_width(); x++) {
+        for (int y=0; y<=image.get_height(); y++) {
+            image.set(x, y, color);
+        }
+    }
 }
 
-// void plotLine(TGAImage &image, Vec2 a, Vec2 b) {
-// 	// Plot line using Bresenham's
-
-
-// 	int dx = b.x - a.x;
-// 	int dy = b.y - a.y;
-// 	int y = a.y;
-// 	int D = 2*dy - dx;
-
-// 	for (int x=a.x; x<=b.x; x++) {
-// 		image.set(x, y, green);
-
-// 		if (D > 0) {
-// 			y++;
-// 			D -= 2*dx;
-// 		}
-// 		D += 2*dy;
-// 	}
-// }
-
-Point makeNormalizedPoint(int width, int height, float x, float y) {
-	Point p(width * x, height * y);
-	return p;
+void drawTriangle(Triangle t) {
+    drawLine(t.p0, t.p1, t.areNormalized);
+    drawLine(t.p1, t.p2, t.areNormalized);
+    drawLine(t.p2, t.p0, t.areNormalized);
 }
 
-void plotLine(float x0, float y0, float x1, float y1, bool normalized, TGAImage &image) {
-	if (normalized) {
-		if (x0 > 1.0 || y0 > 1.0 || x1 > 1.0 || y1 > 1.0) {
-			std::cerr << "ERROR: Normalized values for plotLine are outside of valid range. Expect some weird shit" << std::endl;
-		}
-		x0 = x0 * image.get_width();
-		y0 = y0 * image.get_height();
-		x1 = x1 * image.get_width();
-		y1 = y1 * image.get_height();
-	}
-	plotLine(Point(x0, y0), Point(x1, y1), image);
+void drawRectangle(int width, int height, Point center) {
+
+    Point ul(center.x - (width/2), center.y - (height/2));
+    Point ur(center.x + (width/2), center.y - (height/2));
+    Point ll(center.x - (width/2), center.y + (height/2));
+    Point lr(center.x + (width/2), center.y + (height/2));
+
+    drawLine(ul, ur, false);
+    drawLine(ur, lr, false);
+    drawLine(lr, ll, false);
+    drawLine(ll, ul, false);
 }
+
 
 int main(int argc, char** argv) {
-	int width = 1000;
-	int height = 1000;
-	TGAImage image(width, height, TGAImage::RGB);
-	for (int x=0; x<width; x++) {
-		for (int y=0; y<height; y++) {
-			image.set(x, y, white);
-		}
-	}
+	setBackgroundColor(white);
 
-
-	plotLine(.49, .5, .5, .75, true, image);
-	plotLine(.5, .5, .75, .5, true, image);
-	plotLine(.75, .75, .75, .5, true, image);
-	plotLine(.5, .75, .75, .75, true, image);
-
-	plotLine(0.2, 0.2, 0.4, 0.6, true, image);
-	plotLine(0.4, 0.6, 0.6, 0.2, true, image);
+    Triangle t(.2, .1, .5, .3, .3, .4, true);
+    drawTriangle(t);
 
 
 
-	// image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
+
+
 	image.write_tga_file("output.tga");
 	return 0;
 }

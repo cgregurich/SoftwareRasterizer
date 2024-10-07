@@ -1,7 +1,16 @@
 WILO 10/3:
 Implemented Bresenhams so now I can draw any line.
-* Work on understanding all three functions since they're a bit different from the original, and you didn't understand the original perfecttly either.
+* Work on understanding all three functions since they're a bit different from the original, and you didn't understand the original perfectly either.
 * Look into if it's normal for Bresenham to not draw vertical lines very well? Seems the second pixel drawn after (x0, y0) is always a diagonal point rather than straight down? Probably an implementation issue, I would think?
+
+WILO: 10/6: why does vertical line not work correctly?????
+
+
+## Problems Tackled
+* Implemented line drawing using Bresenham's Line Drawing Algorithm
+* Figured out why vertical line wasn't being drawn correctly: had dx and dy swapped in one calculation in plotLineHigh
+
+
 
 
 Apparently a software rasterizer needs four things:
@@ -13,7 +22,7 @@ Apparently a software rasterizer needs four things:
 Another summary of steps to be done:
 Step 1: Learn line rasterization. Implement Xiaolin Wu's line rasterizer to draw a line with some simple anti aliasing https://en.m.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm
 Step 2: Draw a triangle in wireframe. It's just step 1 three times
-Step 3: Fill the triangle with a single color by doing three cross products to see if a point is inside the triangle or not. At the simplest and slowest, you can just do this for every point on the screen. You cross product from each vertex to the next vertex clockwise with the vector from the same starting vertex to the point. If you get negative results for each point, it's isnide. Draw the color there.
+Step 3: Fill the triangle with a single color by doing three cross products to see if a point is inside the triangle or not. At the simplest and slowest, you can just do this for every point on the screen. You cross product from each vertex to the next vertex clockwise with the vector from the same starting vertex to the point. If you get negative results for each point, it's inside. Draw the color there.
 Step 4: Interpolate colors. Learn barycentric coordiinates (which is basically how close each point in a triangle is to each vertex) and interpolate the pixel color based on the colors of the three vertices.
 Step 5: Put the triangle in world space rather than screen space. Start with an orthogonal camera staring down the z-axis and it's only a couple extra lines of code to clip triangles behind the camera. Try animating the triangle.
 Step 6: Switch the orthogonal camera for a regular perspective camera with a view frustum with a near clipping plane, a far clipping plane, etc. Try animating the camera.
