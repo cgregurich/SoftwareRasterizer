@@ -63,6 +63,7 @@ class Vec3 {
 };
 
 typedef Vec3 Point;
+typedef TGAColor Color;
 
 class Triangle {
     public:
@@ -70,21 +71,23 @@ class Triangle {
         Point p1;
         Point p2;
         bool normalized;
+        Color color;
 
-        Triangle(Point p0, Point p1, Point p2, bool normalized) : p0(p0), p1(p1), p2(p2), normalized(normalized) {
+        Triangle(Point p0, Point p1, Point p2, Color c, bool normalized) : p0(p0), p1(p1), p2(p2), color(c), normalized(normalized) {
 
         }
 
-        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, bool normalized) {
+        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, Color c, bool normalized) {
             p0 = Point(x0, y0);
             p1 = Point(x1, y1);
             p2 = Point(x2, y2);
+            color = c;
             this->normalized = normalized;
         }
 };
 
 
-void drawLine(Point a, Point b, bool normalized, TGAColor color) {
+void drawLine(Point a, Point b, bool normalized, Color color) {
     // This version does everything in one function
     // instead of using helper functions for high vs low lines
 
@@ -128,7 +131,7 @@ void drawLine(float x0, float y0, float x1, float y1, bool normalized) {
 	drawLine(Point(x0, y0), Point(x1, y1), normalized, DEFAULT_COLOR);
 }
 
-void setBackgroundColor(TGAColor color) {
+void setBackgroundColor(Color color) {
     for (int x=0; x<=image.get_width(); x++) {
         for (int y=0; y<=image.get_height(); y++) {
             image.set(x, y, color);
@@ -136,7 +139,7 @@ void setBackgroundColor(TGAColor color) {
     }
 }
 
-void fillTriangle(Triangle t, TGAColor color) {
+void fillTriangle(Triangle t) {
     if (t.normalized) {
         t.p0.x *= image.get_width();
         t.p0.y *= image.get_height();
@@ -173,19 +176,19 @@ void fillTriangle(Triangle t, TGAColor color) {
 
             if ((results[0].z > 0 && results[1].z > 0 && results[2].z > 0) || (results[0].z < 0 && results[1].z < 0 && results[2].z < 0)) {
                 // Pixel should be colored
-                image.set(p.x, p.y, color);
+                image.set(p.x, p.y, t.color);
             }
 
         }
     }
 }
 
-void drawTriangle(Triangle t, bool fill, TGAColor color) {
-    drawLine(t.p0, t.p1, t.normalized, color);
-    drawLine(t.p1, t.p2, t.normalized, color);
-    drawLine(t.p2, t.p0, t.normalized, color);
+void drawTriangle(Triangle t, bool fill) {
+    drawLine(t.p0, t.p1, t.normalized, t.color);
+    drawLine(t.p1, t.p2, t.normalized, t.color);
+    drawLine(t.p2, t.p0, t.normalized, t.color);
     if (fill) {
-        fillTriangle(t, color);
+        fillTriangle(t);
     }
 }
 
@@ -206,7 +209,7 @@ void drawPoint(Point p) {
     image.set(p.x, p.y, purple);
 }
 
-void drawPoint(Point p, TGAColor color) {
+void drawPoint(Point p, Color color) {
     image.set(p.x, p.y, color);
 }
 
@@ -223,21 +226,21 @@ int main(int argc, char** argv) {
     Vec3 v5(.2,  .4,   0);
     Vec3 v6(.4,  .4,   0);
 
-    Triangle a(v0, v6, v5, true);
-    Triangle b(v0, v1, v6, true);
-    Triangle c(v1, v2, v6, true);
-    Triangle d(v6, v2, v3, true);
-    Triangle e(v6, v3, v4, true);
-    Triangle f(v5, v6, v4, true);
+    Color colorSide(0xca, 0xdb, 0xed, 0xff);
+    Color colorFront(0x9a, 0xb9, 0xd5, 0xff);
+    Color colorTop(0x86, 0xad, 0xd6, 255);
+
+    Triangle a(v0, v6, v5, colorTop, true);
+    Triangle b(v0, v1, v6, colorTop, true);
+    Triangle c(v1, v2, v6, colorSide, true);
+    Triangle d(v6, v2, v3, colorSide, true);
+    Triangle e(v6, v3, v4, colorFront, true);
+    Triangle f(v5, v6, v4, colorFront, true);
 
     std::array<Triangle, 6> triangles = {a, b, c, d, e, f};
-    TGAColor colorSide(0xca, 0xdb, 0xed, 0xff);
-    TGAColor colorFront(0x9a, 0xb9, 0xd5, 0xff);
-    TGAColor colorTop(0x86, 0xad, 0xd6, 255);
     
-    TGAColor colors[] = {colorTop, colorTop, colorSide, colorSide, colorFront, colorFront};
     for (int i=0; i<triangles.size(); i++) {
-        drawTriangle(triangles[i], true, colors[i]);
+        drawTriangle(triangles[i], true);
     }
 
 
