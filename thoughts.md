@@ -6,6 +6,10 @@ Other next steps:
 * Barycentric coordinates for interpolating colors in a triangle (add color data to vertices?)
 * Dig more into the math & intuition behind the implementation of filling the triangles. Why do you need to subtract vectors to get the vector from A to B, why cross product, what is a cross product, what does it mean geometrically, etc.?
 
+WILO: 10/8
+Working on understanding barycentric coordinates. WILO in remarkable + trying to find what formula(s) to even use for this
+One reference:chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://users.csc.calpoly.edu/~zwood/teaching/csc471/2017F/barycentric.pdf
+
 
 ## Problems Tackled
 * Implemented line drawing using Bresenham's Line Drawing Algorithm
