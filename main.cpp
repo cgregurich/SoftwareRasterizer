@@ -22,8 +22,8 @@ const TGAColor lightPurple(190, 142, 190, 255);
 const TGAColor teal(0,128,128, 255);
 const TGAColor navy(0,0,128, 255);
 
-#define WIDTH 1000
-#define HEIGHT 1000
+#define WIDTH 400
+#define HEIGHT 400
 #define DEFAULT_COLOR purple
 TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
 
@@ -79,6 +79,10 @@ class Triangle {
         bool normalized;
         // todo remove this as it's not used, but currently drawLine expects it?
         Color color;
+
+        Triangle(Point p0, Point p1, Point p2, bool normalized) : p0(p0), p1(p1), p2(p2), normalized(normalized) {
+
+        }
 
         Triangle(Point p0, Point p1, Point p2, Color c, bool normalized) : p0(p0), p1(p1), p2(p2), color(c), normalized(normalized) {
 
@@ -172,6 +176,7 @@ void fillTriangle(Triangle t, bool lerp) {
 
             // todo should be able to use barycentric coords for deciding if a point is in a triangle, no?
             Point barycentric = calcBarycentricCoordinates(t.p0, t.p1, t.p2, p);
+
             // p0 to p1
             edgeVec = t.p1 - t.p0;
             pointVec = p - t.p0;
@@ -190,16 +195,20 @@ void fillTriangle(Triangle t, bool lerp) {
             Vec3 crossRes = Vec3::cross(edgeVec, pointVec);
 
             if ((results[0].z > 0 && results[1].z > 0 && results[2].z > 0) || (results[0].z < 0 && results[1].z < 0 && results[2].z < 0)) {
+                // p is inside the triangle and therefore should be colored
                 if (lerp) {
+                    // If lerp is true then use each point's colors to interpolate the final pixel color
                     Color lerpedColor = lerpColor(barycentric, t.p0.color, t.p1.color, t.p2.color);
                     image.set(p.x, p.y, lerpedColor);
                 }
                 else {
+                    // If lerp is false then just use the triangle's overall color
+                    todo: implement alpha channeling. Figure out formula for calculating what the new color should be. 
+                    Then make a more general purpose lerp func that doesn't depend on barycentric coordinates.
+                    // Color bgColor = image.get(p.x, p.y);
+                    // Color newColor = Color(t.color.r +)
                     image.set(p.x, p.y, t.color);
                 }
-                // printColor(lerpedColor);
-                // Pixel should be colored
-                // image.set(p.x, p.y, t.color);
             }
 
         }
@@ -247,13 +256,13 @@ Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p) {
 }
 
 void draw3DCube() {
-    Vec3 v0(.3,  .25,   0);
-    Vec3 v1(.5,  .25,   0);
-    Vec3 v2(.5,  .425, 0);
-    Vec3 v3(.4,  .6,   0);
-    Vec3 v4(.2,  .6,   0);
-    Vec3 v5(.2,  .4,   0);
-    Vec3 v6(.4,  .4,   0);
+    Vec3 v0(.3,  .25,   0, black);
+    Vec3 v1(.5,  .25,   0, cyan);
+    Vec3 v2(.5,  .425,  0, cyan);
+    Vec3 v3(.4,  .6,    0, cyan);
+    Vec3 v4(.2,  .6,    0, cyan);
+    Vec3 v5(.2,  .4,    0, cyan);
+    Vec3 v6(.4,  .4,    0, white);
 
     Color colorSide(0xca, 0xdb, 0xed, 0xff);
     Color colorFront(0x9a, 0xb9, 0xd5, 0xff);
@@ -283,12 +292,20 @@ void printColor(Color c) {
 int main(int argc, char** argv) {
 	setBackgroundColor(white);
 
-    Color c = lightPurple;
-    c.a = 100;
-    Triangle t(0.2, 0.1, 0.6, 0.2, 0.1, 0.5, black, purple, c, true);
-    drawTriangle(t, false, true, true);
+    // Triangle t(a, b, c, true);
+    // Point d(.1, .1, 0, blue);
+    // Triangle t2(b, d, c, true);
+    // drawTriangle(t, false, true, true);
+    // drawTriangle(t2, false, true, true);
 
-    draw3DCube();
+
+    // WIP: implement alpha blending
+    Point a(0.21, 0.11, black);
+    Point b(0.61, 0.21, purple);
+    Point c(0.11, 0.51, lightPurple);
+    Triangle t(a, b, c, true);
+    drawTriangle(t, false, true, false);
+    
 
 
 	image.write_tga_file("output.tga");
