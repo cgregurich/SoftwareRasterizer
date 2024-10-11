@@ -10,11 +10,31 @@ WILO: 10/8
 Working on understanding barycentric coordinates. WILO in remarkable + trying to find what formula(s) to even use for this
 One reference:chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://users.csc.calpoly.edu/~zwood/teaching/csc471/2017F/barycentric.pdf
 
+10/11:
+implemented some version of barycentric coordinates and color interpolation; involved changing color to be stored in points instead of triangle, etc.
+Still probably should figure out a way to lerp the lines as well because as of now... well actually now that I think of it I'm not sure where the line
+color is getting pulled from. Probably an uninitialized Color so it's just black?
+Also look into implementing blending/making the alpha value of colors actually do something.
+
+todo:
+* clean up code
+  * Split out into other files?
+  * Remove color from Triangle members
+* Add functionality for windowing, in order to animate
+* Implement blending/alpha usage.
+* Look into the next steps. Orthogonal vs perspective, near clipping plane, far clipping plane, etc??
+* Read TinyRenderer. What does the roadmap there look like anyways?
+* Draw a circle??
+* Anti aliasing (via Xialon Wu's line drawing algorithm...?)
+
+
+
 
 ## Problems Tackled
 * Implemented line drawing using Bresenham's Line Drawing Algorithm
 * Figured out why vertical line wasn't being drawn correctly: had dx and dy swapped in one calculation in plotLineHigh
 * Implemented filling a triangle
+
 
 
 
@@ -27,14 +47,23 @@ Apparently a software rasterizer needs four things:
 
 Another summary of steps to be done:
 Step 1: Learn line rasterization. Implement Xiaolin Wu's line rasterizer to draw a line with some simple anti aliasing https://en.m.wikipedia.org/wiki/Xiaolin_Wu%27s_line_algorithm
+
 Step 2: Draw a triangle in wireframe. It's just step 1 three times
+
 Step 3: Fill the triangle with a single color by doing three cross products to see if a point is inside the triangle or not. At the simplest and slowest, you can just do this for every point on the screen. You cross product from each vertex to the next vertex clockwise with the vector from the same starting vertex to the point. If you get negative results for each point, it's inside. Draw the color there.
+
 Step 4: Interpolate colors. Learn barycentric coordiinates (which is basically how close each point in a triangle is to each vertex) and interpolate the pixel color based on the colors of the three vertices.
+
 Step 5: Put the triangle in world space rather than screen space. Start with an orthogonal camera staring down the z-axis and it's only a couple extra lines of code to clip triangles behind the camera. Try animating the triangle.
+
 Step 6: Switch the orthogonal camera for a regular perspective camera with a view frustum with a near clipping plane, a far clipping plane, etc. Try animating the camera.
+
 Step 7: Add z-buffering and multiple triangles animating around.
+
 Step 8: Add lighting. A light contributes its light to a surface based on the dot product of the triangle normal with a vector pointing from the triangle to the light. The color of the light multiplies each element with the color of the surface.
+
 Step 9: Add texturing. Load a picture from disk using CImg or something and UV map it to the triangle, basically saying this point here in the image is this point on the triangle.
+
 Step 10: Load models off disk and render.
 
 <hr>

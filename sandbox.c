@@ -13,10 +13,10 @@ Point barycentricCoords(Point a, Point b, Point c, Point p) {
 }
 
 int main() {
-    Point a = {2, 1, 0};
-    Point b = {6, 2, 0};
-    Point c = {1, 5, 0};
-    Point p = {3, 3, 0};
+    Point a = {3, 6, 0};
+    Point b = {4, 8, 0};
+    Point c = {2, 8, 0};
+    Point p = {3, 7, 0};
 
     Point bc = barycentricCoords(a, b, c, p);
 
