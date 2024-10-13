@@ -25,11 +25,11 @@ const TGAColor navy(0,0,128, 255);
 #define WIDTH 400
 #define HEIGHT 400
 #define DEFAULT_COLOR purple
-TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
-
-
-
 typedef TGAColor Color;
+TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
+Color blendColors(Color c1, float weight1, Color c2, float weight2);
+
+
 void printColor(Color c);
 class Vec3 {
 	public:
@@ -171,42 +171,21 @@ void fillTriangle(Triangle t, bool lerp) {
     for (int x=0; x<WIDTH; x++) {
         for (int y=0; y<HEIGHT; y++) {
             Point p(x, y);
-            Vec3 edgeVec, pointVec;
-            Vec3 results[3];
 
-            // todo should be able to use barycentric coords for deciding if a point is in a triangle, no?
             Point barycentric = calcBarycentricCoordinates(t.p0, t.p1, t.p2, p);
 
-            // p0 to p1
-            edgeVec = t.p1 - t.p0;
-            pointVec = p - t.p0;
-            results[0] = Vec3::cross(edgeVec, pointVec);
-
-            // p1 to p2
-            edgeVec = t.p2 - t.p1;
-            pointVec = p - t.p1;
-            results[1] = Vec3::cross(edgeVec, pointVec);
-
-            // p2 to p0
-            edgeVec = t.p0 - t.p2;
-            pointVec = p - t.p2;
-            results[2] = Vec3::cross(edgeVec, pointVec);
-
-            Vec3 crossRes = Vec3::cross(edgeVec, pointVec);
-
-            if ((results[0].z > 0 && results[1].z > 0 && results[2].z > 0) || (results[0].z < 0 && results[1].z < 0 && results[2].z < 0)) {
+            if(barycentric.x > 0 && barycentric.y > 0 && barycentric.z > 0) {
                 // p is inside the triangle and therefore should be colored
                 if (lerp) {
                     // If lerp is true then use each point's colors to interpolate the final pixel color
                     Color lerpedColor = lerpColor(barycentric, t.p0.color, t.p1.color, t.p2.color);
                     image.set(p.x, p.y, lerpedColor);
+
+                    Color newColor = blendColors(t.p0.color, barycentric.x, t.p1.color, barycentric.y);
+                    newColor = blendColors(newColor, 1-barycentric.z, t.p2.color, barycentric.z);
+                    image.set(p.x, p.y, newColor);
                 }
-                else {
-                    // If lerp is false then just use the triangle's overall color
-                    todo: implement alpha channeling. Figure out formula for calculating what the new color should be. 
-                    Then make a more general purpose lerp func that doesn't depend on barycentric coordinates.
-                    // Color bgColor = image.get(p.x, p.y);
-                    // Color newColor = Color(t.color.r +)
+                else { // If lerp is false then just use the triangle's overall color
                     image.set(p.x, p.y, t.color);
                 }
             }
@@ -288,23 +267,41 @@ void printColor(Color c) {
     std::cout << "Color: (" << (int)c.r << ", " << (int)c.g << ", " << (int)c.b << ")\n";
 }
 
+Color blendColorsByAlpha(Color bg, Color fg) {
+    Color blended(fg.a*(fg.r)+(1-fg.a)*bg.r, fg.a*fg.g+(1-fg.a)*bg.g, fg.a*fg.b+(1-fg.a)*bg.b, 255);
+    return blended;
+}
+
+Color blendColors(Color c1, float weight1, Color c2, float weight2) {
+
+    int newRed = c1.r * weight1 + c2.r * weight2;
+    int newGreen = c1.g * weight1 + c2.g * weight2;
+    int newBlue = c1.b * weight1 + c2.b * weight2;
+
+    // Divide by the sum of weights to account for situations
+    // where the sum of the weights is less than 1.0
+    newRed /= weight1 + weight2;
+    newGreen /= weight1 + weight2;
+    newBlue /= weight1 + weight2;
+    return Color(newRed, newGreen, newBlue, 255);
+}
 
 int main(int argc, char** argv) {
+    // Color fg(255, 0, 0, 100);
+    // Color bg(255, 255, 255, 255);
+    // float fgWeight = (fg.a / 255.0);
+    // float bgWeight = 1 - fgWeight;
+    // Color blended = blendColors(bg, bgWeight, fg, fgWeight);
 	setBackgroundColor(white);
 
-    // Triangle t(a, b, c, true);
-    // Point d(.1, .1, 0, blue);
-    // Triangle t2(b, d, c, true);
-    // drawTriangle(t, false, true, true);
-    // drawTriangle(t2, false, true, true);
-
-
-    // WIP: implement alpha blending
-    Point a(0.21, 0.11, black);
-    Point b(0.61, 0.21, purple);
-    Point c(0.11, 0.51, lightPurple);
+    Point a(0.21, 0.11, gray);
+    Point b(0.61, 0.21, blue);
+    Point c(0.11, 0.51, gray);
     Triangle t(a, b, c, true);
-    drawTriangle(t, false, true, false);
+
+    drawTriangle(t, false, true, true);
+
+    // todo: implement vec3 math operations
     
 
 
