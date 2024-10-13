@@ -16,6 +16,13 @@ Still probably should figure out a way to lerp the lines as well because as of n
 color is getting pulled from. Probably an uninitialized Color so it's just black?
 Also look into implementing blending/making the alpha value of colors actually do something.
 
+10/12:
+Got blending working, generally speaking. I can make the triangle transparent, but I removed that bit since I was just sandboxing.
+It's more a question of: do I need that? What's a good and intuitive way to implement it, etc.
+Look at below notes/ideas to decide what to do next.
+lerp the points along the lines wouldn't be a bad idea, although I reckon just leaving the outline off is about the same difference innit?
+Should probably clean up code and make function declarations, maybe move to other files, etc. Look at about wilos/thoughts and delete stuff!
+
 todo:
 * clean up code
   * Split out into other files?

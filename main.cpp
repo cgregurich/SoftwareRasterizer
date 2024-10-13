@@ -21,13 +21,14 @@ const TGAColor purple(128,0,128, 255);
 const TGAColor lightPurple(190, 142, 190, 255);
 const TGAColor teal(0,128,128, 255);
 const TGAColor navy(0,0,128, 255);
+const TGAColor lightpink(255, 179, 222, 255);
 
 #define WIDTH 400
 #define HEIGHT 400
 #define DEFAULT_COLOR purple
 typedef TGAColor Color;
 TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
-Color blendColors(Color c1, float weight1, Color c2, float weight2);
+Color blendColors(Color c1, Color c2, float weight1, float weight2);
 
 
 void printColor(Color c);
@@ -174,15 +175,18 @@ void fillTriangle(Triangle t, bool lerp) {
 
             Point barycentric = calcBarycentricCoordinates(t.p0, t.p1, t.p2, p);
 
+            // p is inside the triangle and therefore should be colored
             if(barycentric.x > 0 && barycentric.y > 0 && barycentric.z > 0) {
-                // p is inside the triangle and therefore should be colored
-                if (lerp) {
-                    // If lerp is true then use each point's colors to interpolate the final pixel color
-                    Color lerpedColor = lerpColor(barycentric, t.p0.color, t.p1.color, t.p2.color);
-                    image.set(p.x, p.y, lerpedColor);
 
-                    Color newColor = blendColors(t.p0.color, barycentric.x, t.p1.color, barycentric.y);
-                    newColor = blendColors(newColor, 1-barycentric.z, t.p2.color, barycentric.z);
+                // If lerp is true then use each point's colors to interpolate the final pixel color
+                if (lerp) {
+
+                    // Blend A and B
+                    Color newColor = blendColors(t.p0.color, t.p1.color, barycentric.x, barycentric.y);
+
+                    // Then blend that color with C
+                    newColor = blendColors(newColor, t.p2.color, 1-barycentric.z, barycentric.z);
+
                     image.set(p.x, p.y, newColor);
                 }
                 else { // If lerp is false then just use the triangle's overall color
@@ -272,7 +276,15 @@ Color blendColorsByAlpha(Color bg, Color fg) {
     return blended;
 }
 
-Color blendColors(Color c1, float weight1, Color c2, float weight2) {
+/*
+Overload blendColors() to easily blend two colors, using
+weight of 0.5 for both
+*/
+Color blendColors(Color c1, Color c2) {
+    return blendColors(c1, c2, 0.5, 0.5);
+}
+
+Color blendColors(Color c1, Color c2, float weight1, float weight2) {
 
     int newRed = c1.r * weight1 + c2.r * weight2;
     int newGreen = c1.g * weight1 + c2.g * weight2;
@@ -287,23 +299,20 @@ Color blendColors(Color c1, float weight1, Color c2, float weight2) {
 }
 
 int main(int argc, char** argv) {
-    // Color fg(255, 0, 0, 100);
-    // Color bg(255, 255, 255, 255);
-    // float fgWeight = (fg.a / 255.0);
-    // float bgWeight = 1 - fgWeight;
-    // Color blended = blendColors(bg, bgWeight, fg, fgWeight);
-	setBackgroundColor(white);
+    Color blended = blendColors(red, blue, 0.6, 0.4);
+    setBackgroundColor(blended);
 
-    Point a(0.21, 0.11, gray);
-    Point b(0.61, 0.21, blue);
-    Point c(0.11, 0.51, gray);
+    Point a(0.21, 0.11, lightpink);
+    Point b(0.61, 0.21, yellow);
+    Point c(0.11, 0.51, blendColors(red, yellow, 0.8, 0.2));
+    a.color.a = 127;
+    b.color.a = 127;
+    c.color.a = 127;
     Triangle t(a, b, c, true);
 
     drawTriangle(t, false, true, true);
 
     // todo: implement vec3 math operations
-    
-
 
 	image.write_tga_file("output.tga");
 	return 0;
