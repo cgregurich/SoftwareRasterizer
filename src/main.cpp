@@ -8,28 +8,8 @@
 #include <regex>
 
 
-/*-------------------------------------
-COLOR CONSTANTS
--------------------------------------*/
-const TGAColor black(0,0,0, 255);
-const TGAColor white(255,255,255, 255);
-const TGAColor red(255,0,0, 255);
-const TGAColor green(0,255,0, 255);
-const TGAColor blue(0,0,255, 255);
+#include "Geometry.hpp"
 
-const TGAColor yellow(255,255,0, 255);
-const TGAColor cyan(0,255,255, 255);
-const TGAColor magenta(255,0,255, 255);
-const TGAColor lime(0,255,0, 255);
-const TGAColor silver(192,192,192, 255);
-const TGAColor gray(128,128,128, 255);
-const TGAColor maroon(128,0,0, 255);
-const TGAColor olive(128,128,0, 255);
-const TGAColor purple(128,0,128, 255);
-const TGAColor lightPurple(190, 142, 190, 255);
-const TGAColor teal(0,128,128, 255);
-const TGAColor navy(0,0,128, 255);
-const TGAColor lightpink(255, 179, 222, 255);
 
 /*-------------------------------------
 IMAGE SETUP/CREATION
@@ -37,87 +17,7 @@ IMAGE SETUP/CREATION
 #define WIDTH 400
 #define HEIGHT 400
 #define DEFAULT_COLOR purple
-typedef TGAColor Color;
 TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
-
-
-/*-------------------------------------
-CLASSES
--------------------------------------*/
-class Vec3 {
-	public:
-        float x;
-        float y;
-        float z;
-        Color color;
-
-		Vec3() : x(0), y(0), z(0) {
-		}
-		Vec3(float x, float y) : y(y), x(x), z(0) {
-		}
-		Vec3(float x, float y, Color c) : y(y), x(x), z(0), color(c) {
-		}
-		Vec3(float x, float y, float z) : y(y), x(x), z(z) {
-		}
-
-		Vec3(float x, float y, float z, Color c) : y(y), x(x), z(z), color(c) {
-		}
-
-        friend std::ostream& operator<<(std::ostream &os, const Vec3 &v) {
-            os << "Vec3: (" << v.x << ", " << v.y << ", " << v.z << ")";
-            return os;
-        }
-
-        Vec3 operator-(const Vec3 &other) const {
-            return Vec3(this->x - other.x, this->y - other.y, this->z - other.z);
-        }
-
-        static Vec3 cross(Vec3 a, Vec3 b) {
-            Vec3 result(
-                (a.y * b.z - a.z * b.y),
-                (a.z*b.x - a.x*b.z),
-                (a.x*b.y - a.y*b.x)
-                );
-            return result;
-        }
-};
-
-typedef Vec3 Point;
-typedef Vec3 Vertex;
-
-class Triangle {
-    public:
-        Point p0;
-        Point p1;
-        Point p2;
-        bool normalized;
-        // todo remove this as it's not used, but currently drawLine expects it?
-        Color color;
-
-        
-        // Points' and triangle's colors uninitialized
-        Triangle(Point p0, Point p1, Point p2, bool normalized) : p0(p0), p1(p1), p2(p2), normalized(normalized) {
-
-        }
-
-        // Points' colors uninitialized
-        Triangle(Point p0, Point p1, Point p2, Color c, bool normalized) : p0(p0), p1(p1), p2(p2), color(c), normalized(normalized) {
-
-        }
-
-        // Points' colors uninitialized
-        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, Color c, bool normalized) : Triangle(Point(x0, y0), Point(x1, y1), Point(x2, y2), c, normalized ){
-        }
-
-        // Triangle's color uninitialized
-        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, Color c0, Color c1, Color c2, bool normalized) {
-            p0 = Point(x0, y0, 0, c0);
-            p1 = Point(x1, y1, 0, c1);
-            p2 = Point(x2, y2, 0, c2);
-            this->normalized = normalized;
-        }
-};
-
 
 
 void drawLine(Point a, Point b, bool normalized, Color color) {
@@ -300,6 +200,9 @@ Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p) {
     return Point(alpha, beta, gamma);
 }
 
+/*
+Very specific sandbox function. Probably not needed
+*/
 void draw3DCube() {
     Vec3 v0(.3,  .25,   0, black);
     Vec3 v1(.5,  .25,   0, cyan);
@@ -454,10 +357,6 @@ bool parseFaceFromObjLine(std::string rawLine, std::vector<int> &vertexIndices) 
     return true;
 }
 
-enum class CoordinateType {
-    Cartesian,
-    Screen
-};
 void drawObj(std::string filepath, CoordinateType coordType ) {
     // Model model(filepath, coordType);
 
@@ -526,6 +425,7 @@ int main(int argc, char** argv) {
 
     drawObj("obj/head copy.obj", CoordinateType::Cartesian);
 
+    // todo trying to figure out how to properly parse the face lines of the obj files
     // std::string line = "f 24/1/24 25/2/25 26/3/26";
     // int a, b, c;
     // std::regex delimiter("/ ");

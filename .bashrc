@@ -1,2 +1,2 @@
-alias c="g++ main.cpp tgaimage.cpp -o main -static"
-alias r="c && ./main.exe"
+alias c="g++ src/main.cpp src/tgaimage.cpp -o build/main -static"
+alias r="c && ./build/main.exe"
