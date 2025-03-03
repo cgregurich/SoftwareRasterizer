@@ -3,35 +3,47 @@
 #include <iostream>
 #include <cstdlib>
 #include <array>
+#include <sstream>
+#include <vector>
+#include <regex>
 
+
+/*-------------------------------------
+COLOR CONSTANTS
+-------------------------------------*/
 const TGAColor black(0,0,0, 255);
 const TGAColor white(255,255,255, 255);
 const TGAColor red(255,0,0, 255);
-const TGAColor lime(0,255,0, 255);
+const TGAColor green(0,255,0, 255);
 const TGAColor blue(0,0,255, 255);
+
 const TGAColor yellow(255,255,0, 255);
 const TGAColor cyan(0,255,255, 255);
 const TGAColor magenta(255,0,255, 255);
+const TGAColor lime(0,255,0, 255);
 const TGAColor silver(192,192,192, 255);
 const TGAColor gray(128,128,128, 255);
 const TGAColor maroon(128,0,0, 255);
 const TGAColor olive(128,128,0, 255);
-const TGAColor green(0,128,0, 255);
 const TGAColor purple(128,0,128, 255);
 const TGAColor lightPurple(190, 142, 190, 255);
 const TGAColor teal(0,128,128, 255);
 const TGAColor navy(0,0,128, 255);
 const TGAColor lightpink(255, 179, 222, 255);
 
+/*-------------------------------------
+IMAGE SETUP/CREATION
+-------------------------------------*/
 #define WIDTH 400
 #define HEIGHT 400
 #define DEFAULT_COLOR purple
 typedef TGAColor Color;
 TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
-Color blendColors(Color c1, Color c2, float weight1, float weight2);
 
 
-void printColor(Color c);
+/*-------------------------------------
+CLASSES
+-------------------------------------*/
 class Vec3 {
 	public:
         float x;
@@ -71,6 +83,7 @@ class Vec3 {
 };
 
 typedef Vec3 Point;
+typedef Vec3 Vertex;
 
 class Triangle {
     public:
@@ -81,14 +94,22 @@ class Triangle {
         // todo remove this as it's not used, but currently drawLine expects it?
         Color color;
 
+        
+        // Points' and triangle's colors uninitialized
         Triangle(Point p0, Point p1, Point p2, bool normalized) : p0(p0), p1(p1), p2(p2), normalized(normalized) {
 
         }
 
+        // Points' colors uninitialized
         Triangle(Point p0, Point p1, Point p2, Color c, bool normalized) : p0(p0), p1(p1), p2(p2), color(c), normalized(normalized) {
 
         }
 
+        // Points' colors uninitialized
+        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, Color c, bool normalized) : Triangle(Point(x0, y0), Point(x1, y1), Point(x2, y2), c, normalized ){
+        }
+
+        // Triangle's color uninitialized
         Triangle(float x0, float y0, float x1, float y1, float x2, float y2, Color c0, Color c1, Color c2, bool normalized) {
             p0 = Point(x0, y0, 0, c0);
             p1 = Point(x1, y1, 0, c1);
@@ -97,7 +118,6 @@ class Triangle {
         }
 };
 
-Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p);
 
 
 void drawLine(Point a, Point b, bool normalized, Color color) {
@@ -140,10 +160,31 @@ void drawLine(Point a, Point b, bool normalized, Color color) {
     }
 }
 
+/*-------------------------------------
+FUNCTION DECLARATIONS
+-------------------------------------*/
+Color blendColors(Color c1, Color c2, float weight1, float weight2);
+void printColor(Color c);
+Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p);
+
+
+/*-------------------------------------
+FUNCTION DEFINITIONS
+-------------------------------------*/
+
+
+
+/*
+Draws a line from (x0, y0) to (x1, y1) and takes a normalized arg
+to determine how these coordinates are parsed
+*/
 void drawLine(float x0, float y0, float x1, float y1, bool normalized) {
 	drawLine(Point(x0, y0), Point(x1, y1), normalized, DEFAULT_COLOR);
 }
 
+/*
+Sets all pixels in the image to the given color
+*/
 void setBackgroundColor(Color color) {
     for (int x=0; x<=image.get_width(); x++) {
         for (int y=0; y<=image.get_height(); y++) {
@@ -152,6 +193,9 @@ void setBackgroundColor(Color color) {
     }
 }
 
+/*
+Does linear interpolation of three colors based on a barycentric coordinate
+*/
 Color lerpColor(Point barycentric, Color colorA, Color colorB, Color colorC) {
     int newRed = colorA.r * barycentric.x + colorB.r * barycentric.y + colorC.r * barycentric.z;
     int newGreen = colorA.g * barycentric.x + colorB.g * barycentric.y + colorC.g * barycentric.z;
@@ -190,7 +234,15 @@ void fillTriangle(Triangle t, bool lerp) {
                     image.set(p.x, p.y, newColor);
                 }
                 else { // If lerp is false then just use the triangle's overall color
-                    image.set(p.x, p.y, t.color);
+                    // Blend color with bg (only has an effect if triangle's color has some transparency)
+                    // Try blending with background??
+                    Color bg = image.get(p.x, p.y);
+                    // printColor(bg);
+                    float fgWeight = t.color.a / 255.0;
+                    float bgWeight = 1 - fgWeight;
+                    Color newColor = blendColors(t.color, bg, fgWeight, bgWeight);
+
+                    image.set(p.x, p.y, newColor);
                 }
             }
 
@@ -210,6 +262,10 @@ void drawTriangle(Triangle t, bool outline, bool fill, bool lerp) {
     }
 }
 
+/*
+Draw a wireframe rectangle. Not particularly robust i.e. doesn't use
+normalized coordinates, can't be filled, etc.
+*/
 void drawRectangle(int width, int height, Point center) {
 
     Point ul(center.x - (width/2), center.y - (height/2));
@@ -223,10 +279,16 @@ void drawRectangle(int width, int height, Point center) {
     drawLine(ll, ul, false, DEFAULT_COLOR);
 }
 
+/*
+Sets a point a hard-coded color
+*/
 void drawPoint(Point p) {
     image.set(p.x, p.y, purple);
 }
 
+/*
+Sets a point a given color
+*/
 void drawPoint(Point p, Color color) {
     image.set(p.x, p.y, color);
 }
@@ -271,8 +333,21 @@ void printColor(Color c) {
     std::cout << "Color: (" << (int)c.r << ", " << (int)c.g << ", " << (int)c.b << ")\n";
 }
 
+// FIXME
 Color blendColorsByAlpha(Color bg, Color fg) {
-    Color blended(fg.a*(fg.r)+(1-fg.a)*bg.r, fg.a*fg.g+(1-fg.a)*bg.g, fg.a*fg.b+(1-fg.a)*bg.b, 255);
+
+    /* Color's alpha is 0-255 but we want to work with floats for
+    these calculations */
+    float fgWeight = fg.a / 255.0;
+    float bgWeight = 1 - fgWeight;
+
+    int newRed = fgWeight*(fg.r) + bgWeight*bg.r;
+    int newGreen = fgWeight*fg.g + bgWeight*bg.g;
+    int newBlue = fgWeight*fg.b + bgWeight*bg.b;
+    std::cout << "newRed=" << newRed << std::endl;
+    // Color blended(fg.a*(fg.r)+(1-fg.a)*bg.r, fg.a*fg.g+(1-fg.a)*bg.g, fg.a*fg.b+(1-fg.a)*bg.b, 255);
+    Color blended(newRed, newGreen, newBlue, 255);
+    printColor(blended);
     return blended;
 }
 
@@ -298,22 +373,182 @@ Color blendColors(Color c1, Color c2, float weight1, float weight2) {
     return Color(newRed, newGreen, newBlue, 255);
 }
 
+
+/*
+Convert normalized cartesian coordinates
+to normalized screen coordinates.
+Not sure if I'm using these terms correctly, so what I mean is:
+
+Screen coordinates:
+Origin in upper left
+y is positive going down
+x is positive going right
+Negative values are out of bounds
+Normalized range is 0.0 to 1.0
+
+Cartesian coordinates:
+Origin is in the center
+Left is negative x
+Right is positive x
+Down is negative y
+Up is positive y
+Negative and positive values are valid
+Normalized range is -1.0 to 1.0
+*/
+Vec3 normCartToNormScreen(Vec3 normCart, int width, int height) {
+    float screenX = normCart.x * width/2 + width/2;
+    float normScreenX = screenX / width;
+    float screenY = -(normCart.y * height/2) + width/2;
+    float normScreenY = screenY / height;
+
+    return Vec3(normScreenX, normScreenY);
+}
+
+bool parseVertexFromObjLine(std::string rawLine, Vertex &vertex) {
+    /*
+    Currently working with simple .obj files with lines like:
+    v 0.5 0.12 0.654
+
+    So we're parsing them as:
+    <string> <float> <float> <float>
+
+    And passing these three floats into the given Vertex's x, y, and z
+    */
+    std::stringstream ss(rawLine);
+
+    /* Check if line can is a vertex line */
+    std::string keyword;
+    ss >> keyword;
+    if (keyword != "v") return false;
+
+    /* Parse x, y, and z values from line */
+    float x, y, z;
+    ss >> x >> y >> z;
+
+    vertex.x = x;
+    vertex.y = y;
+    vertex.z = z;
+
+    return true;
+}
+
+bool parseFaceFromObjLine(std::string rawLine, std::vector<int> &vertexIndices) {
+    std::stringstream ss(rawLine);
+    std::string keyword;
+    ss >> keyword;
+    if (keyword != "f") return false;
+
+    /* Parse vertex indices from line */
+    /* Line example:
+    f 24/1/25 25/2/25 26/3/26
+    */
+    int a, b, c;
+    ss >> a >> b >> c;
+
+    vertexIndices[0] = a;
+    vertexIndices[1] = b;
+    vertexIndices[2] = c;
+
+    // std::cout << "a=" << a << "  b=" << b << "  c=" << c << std::endl;
+
+    return true;
+}
+
+enum class CoordinateType {
+    Cartesian,
+    Screen
+};
+void drawObj(std::string filepath, CoordinateType coordType ) {
+    // Model model(filepath, coordType);
+
+    ///////////////
+    std::ifstream file(filepath);
+    if (!file) {
+        std::cerr << "Error opening file" << std::endl;
+        return;
+    }
+
+    std::string line; // Line read from file
+    std::vector<Vertex> vertices; // Vertices parsed from file
+    Vertex vertex;
+
+    /* Parse all the vertex position lines and turn them into a vector of vertices
+    which will be used to index into based off the faces */
+    while (std::getline(file, line)) {
+        if (parseVertexFromObjLine(line, vertex)) {
+            vertices.push_back(vertex);
+        }
+    }
+    std::cout << "Done parsing vertices" << std::endl;
+
+
+    /* Parse the face elements */
+    // todo: can optimize by reading file once
+    file.clear(); 
+    file.seekg(0);
+    std::vector<int> vertexIndices(3);
+    int faceCounter = 0;
+    while (std::getline(file, line)) {
+        if (parseFaceFromObjLine(line, vertexIndices)) {
+            // todo this is just for debugging/seeing progress
+            faceCounter++;
+            if (faceCounter % 100 == 0) std::cout << "faceCounter=" << faceCounter << std::endl;
+            // todo end
+
+            int v1Index, v2Index, v3Index;
+            v1Index = vertexIndices[0];
+            v2Index = vertexIndices[1];
+            v3Index = vertexIndices[2];
+
+            Vertex v1, v2, v3;
+            v1 = vertices[v1Index-1];
+            v2 = vertices[v2Index-1];
+            v3 = vertices[v3Index-1];
+
+            /* Need to convert to screen coords if the input is Cartesian */
+            if (coordType == CoordinateType::Cartesian) {
+                v1 = normCartToNormScreen(v1, WIDTH, HEIGHT);
+                v2 = normCartToNormScreen(v2, WIDTH, HEIGHT);
+                v3 = normCartToNormScreen(v3, WIDTH, HEIGHT);
+            }
+
+            Triangle t(v1, v2, v3, true);
+            drawTriangle(t, true, true, false);
+        }
+    }
+
+    file.close();
+}
+
+
 int main(int argc, char** argv) {
-    Color blended = blendColors(red, blue, 0.6, 0.4);
-    setBackgroundColor(blended);
+    setBackgroundColor(white);
 
-    Point a(0.21, 0.11, lightpink);
-    Point b(0.61, 0.21, yellow);
-    Point c(0.11, 0.51, blendColors(red, yellow, 0.8, 0.2));
-    a.color.a = 127;
-    b.color.a = 127;
-    c.color.a = 127;
-    Triangle t(a, b, c, true);
+    drawObj("obj/head copy.obj", CoordinateType::Cartesian);
 
-    drawTriangle(t, false, true, true);
+    // std::string line = "f 24/1/24 25/2/25 26/3/26";
+    // int a, b, c;
+    // std::regex delimiter("/ ");
+    // // +1 to skip the f
+    // std::sregex_token_iterator itr(line.begin() + 1, line.end(), delimiter, -1);
+    // std::cout << *itr << std::endl;
 
-    // todo: implement vec3 math operations
+    // std::sregex_token_iterator end;
+
+    // while (itr != end) {
+    //     std::cout << std::stoi(*itr) << std::endl;
+    //     ++itr;
+    // }
+
+
+
+
+
+
+
 
 	image.write_tga_file("output.tga");
-	return 0;
+
+
+    return 0;
 }

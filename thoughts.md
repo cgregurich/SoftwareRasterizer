@@ -1,7 +1,3 @@
-WILO: 10/7
-Implementing filling a triangle so I can manually draw a 3D cube, for example. And just remembered that I could refer to TinyRenderer for ideas of
-what to do next! Haha
-
 Other next steps:
 * Barycentric coordinates for interpolating colors in a triangle (add color data to vertices?)
 * Dig more into the math & intuition behind the implementation of filling the triangles. Why do you need to subtract vectors to get the vector from A to B, why cross product, what is a cross product, what does it mean geometrically, etc.?
@@ -59,7 +55,7 @@ Step 2: Draw a triangle in wireframe. It's just step 1 three times
 
 Step 3: Fill the triangle with a single color by doing three cross products to see if a point is inside the triangle or not. At the simplest and slowest, you can just do this for every point on the screen. You cross product from each vertex to the next vertex clockwise with the vector from the same starting vertex to the point. If you get negative results for each point, it's inside. Draw the color there.
 
-Step 4: Interpolate colors. Learn barycentric coordiinates (which is basically how close each point in a triangle is to each vertex) and interpolate the pixel color based on the colors of the three vertices.
+Step 4: Interpolate colors. Learn barycentric coordinates (which is basically how close each point in a triangle is to each vertex) and interpolate the pixel color based on the colors of the three vertices.
 
 Step 5: Put the triangle in world space rather than screen space. Start with an orthogonal camera staring down the z-axis and it's only a couple extra lines of code to clip triangles behind the camera. Try animating the triangle.
 
