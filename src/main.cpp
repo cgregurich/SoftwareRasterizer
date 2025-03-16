@@ -6,17 +6,18 @@
 #include <sstream>
 #include <vector>
 #include <regex>
-
+#include <cmath>
 
 #include "Geometry.hpp"
+#include "Matrix.hpp"
 
 
 /*-------------------------------------
 IMAGE SETUP/CREATION
 -------------------------------------*/
-#define WIDTH 400
-#define HEIGHT 400
-#define DEFAULT_COLOR purple
+#define WIDTH 600
+#define HEIGHT 600
+#define DEFAULT_COLOR black
 TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
 
 
@@ -60,6 +61,22 @@ void drawLine(Point a, Point b, bool normalized, Color color) {
     }
 }
 
+/* Overloaded: uses hardcoded color instead of arg */
+void drawLine(Point a, Point b, bool normalized) {
+    drawLine(a, b, normalized, DEFAULT_COLOR);
+}
+
+/* Overloaded: four floats instead of two Points */
+void drawLine(float x0, float y0, float x1, float y1, bool normalized, Color color) {
+    drawLine(Point(x0, y0), Point(x1, y1), normalized, color);
+}
+
+/* Overloaded: uses hardcoded color instead of arg */
+void drawLine(float x0, float y0, float x1, float y1, bool normalized) {
+    drawLine(x0, y0, x1, y1, normalized, DEFAULT_COLOR);
+}
+
+
 /*-------------------------------------
 FUNCTION DECLARATIONS
 -------------------------------------*/
@@ -71,17 +88,6 @@ Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p);
 /*-------------------------------------
 FUNCTION DEFINITIONS
 -------------------------------------*/
-
-
-
-/*
-Draws a line from (x0, y0) to (x1, y1) and takes a normalized arg
-to determine how these coordinates are parsed
-*/
-void drawLine(float x0, float y0, float x1, float y1, bool normalized) {
-	drawLine(Point(x0, y0), Point(x1, y1), normalized, DEFAULT_COLOR);
-}
-
 /*
 Sets all pixels in the image to the given color
 */
@@ -182,8 +188,17 @@ void drawRectangle(int width, int height, Point center) {
 /*
 Sets a point a hard-coded color
 */
-void drawPoint(Point p) {
-    image.set(p.x, p.y, purple);
+void drawPoint(Point p, bool normalized) {
+    int x, y;
+    if (normalized) {
+        x = WIDTH * p.x;
+        y = HEIGHT * p.y;
+    }
+    else {
+        x = p.x;
+        y = p.y;
+    }
+    image.set(x, y, DEFAULT_COLOR);
 }
 
 /*
@@ -216,12 +231,12 @@ void draw3DCube() {
     Color colorFront(0x9a, 0xb9, 0xd5, 0xff);
     Color colorTop(0x86, 0xad, 0xd6, 255);
 
-    Triangle a(v0, v6, v5, colorTop, true);
-    Triangle b(v0, v1, v6, colorTop, true);
-    Triangle c(v1, v2, v6, colorSide, true);
-    Triangle d(v6, v2, v3, colorSide, true);
-    Triangle e(v6, v3, v4, colorFront, true);
-    Triangle f(v5, v6, v4, colorFront, true);
+    Triangle a(v0, v6, v5, true, colorTop);
+    Triangle b(v0, v1, v6, true, colorTop);
+    Triangle c(v1, v2, v6, true, colorSide);
+    Triangle d(v6, v2, v3, true, colorSide);
+    Triangle e(v6, v3, v4, true, colorFront);
+    Triangle f(v5, v6, v4, true, colorFront);
 
     std::array<Triangle, 6> triangles = {a, b, c, d, e, f};
     
@@ -420,35 +435,157 @@ void drawObj(std::string filepath, CoordinateType coordType ) {
 }
 
 
+// todo fix parsing obj file (instead of having to manually modify the file to accomodate my flawed face element parsing logic)
+
+
+
+#define DEG_TO_RAD(deg) deg * M_PI/180
+
+template <typename T>
+Point pointMatrixMultiply(Point p, const Matrix<T>& m) {
+    if (m.getRows() != 3) {
+        throw std::invalid_argument("Matrix has invalid number of rows for multiplication.");
+    }
+    T newX, newY, newZ;
+    newX = p.x * m[0][0] + p.y * m[1][0] + p.z * m[2][0];
+    newY = p.x * m[0][1] + p.y * m[1][1] + p.z * m[2][1];
+    newZ = p.x * m[0][2] + p.y * m[1][2] + p.z * m[2][2];
+    Point newP(newX, newY, newZ);
+
+    return newP;
+}
+
+/* Rotate point about the z axis */
+Point rotatePointZ(Point p, int degrees) {
+    double rad = DEG_TO_RAD(degrees);
+    Matrix<double> rotateMatrix(
+        {
+            { cos(rad),     sin(rad),   0 },
+            { -sin(rad),    cos(rad),   0 },
+            { 0,            0,          1 }
+        }
+    );
+    float x, y, z;
+    Point newP = pointMatrixMultiply(p, rotateMatrix);
+    return newP;
+}
+
+Triangle rotateTriangleZ(Triangle t, int degrees) {
+    Point rotatedA, rotatedB, rotatedC;
+    rotatedA = rotatePointZ(t.p0, degrees);
+    rotatedB = rotatePointZ(t.p1, degrees);
+    rotatedC = rotatePointZ(t.p2, degrees);
+    Triangle rotated(rotatedA, rotatedB, rotatedC, t.normalized, yellow);
+    return rotated;
+}
+
+void drawCoordinatePlane() {
+    Color color = white;
+    /* Draw grid */
+    drawLine(0.5, -0.1, 0.5, 1.1, true, white);
+    drawLine(-0.1, 0.5, 1.1, 0.5, true, white);
+
+    int ticks = 10;
+    float tickIncrement = 0.5 / ticks;
+
+    /* Draw positive x ticks */
+    for (int i=1; i<=ticks; ++i) {
+        float tickX0, tickY0, tickX1, tickY1;
+        tickX0 = 0.5 + tickIncrement * i;
+        tickY0 = 0.49;
+        tickX1 = 0.5 + tickIncrement * i;
+        tickY1 = 0.51;
+        drawLine(tickX0, tickY0, tickX1, tickY1, true, white);
+    }
+
+    /* Draw negative x ticks */
+    for (int i=1; i<=ticks; ++i) {
+        float tickX0, tickY0, tickX1, tickY1;
+        tickX0 = 0.5 - tickIncrement * i;
+        tickY0 = 0.49;
+        tickX1 = 0.5 - tickIncrement * i;
+        tickY1 = 0.51;
+        drawLine(tickX0, tickY0, tickX1, tickY1, true, white);
+    }
+
+    /* Draw negative y ticks */
+    for (int i=1; i<=ticks; ++i) {
+        float tickX0, tickY0, tickX1, tickY1;
+        tickX0 = 0.49;
+        tickY0 = 0.5 + tickIncrement * i;
+        tickX1 = 0.51;
+        tickY1 = 0.5 + tickIncrement * i;
+        drawLine(tickX0, tickY0, tickX1, tickY1, true, white);
+    }
+
+    /* Draw positive y ticks */
+    for (int i=1; i<=ticks; ++i) {
+        float tickX0, tickY0, tickX1, tickY1;
+        tickX0 = 0.49;
+        tickY0 = 0.5 - tickIncrement * i;
+        tickX1 = 0.51;
+        tickY1 = 0.5 - tickIncrement * i;
+        drawLine(tickX0, tickY0, tickX1, tickY1, true, white);
+    }
+}
+
 int main(int argc, char** argv) {
-    setBackgroundColor(white);
+    setBackgroundColor(black);
 
-    drawObj("obj/head copy.obj", CoordinateType::Cartesian);
 
-    // todo trying to figure out how to properly parse the face lines of the obj files
-    // std::string line = "f 24/1/24 25/2/25 26/3/26";
-    // int a, b, c;
-    // std::regex delimiter("/ ");
-    // // +1 to skip the f
-    // std::sregex_token_iterator itr(line.begin() + 1, line.end(), delimiter, -1);
-    // std::cout << *itr << std::endl;
+    // drawObj("obj/head copy.obj", CoordinateType::Cartesian);
 
-    // std::sregex_token_iterator end;
+    Matrix<float> matrix(
+        {
+            {1, 2, 3},
+            {4, 5, 6},
+            {7, 8, 9}
+        }
+    );
 
-    // while (itr != end) {
-    //     std::cout << std::stoi(*itr) << std::endl;
-    //     ++itr;
+    // todo: implemented some version of rotation, but based on how the image coordinate system
+    // works, it's drawing the lower right quarter of a circle. Need to understand what's going on
+    // behind the scenes and alter the implementation to deal with it. Refresh on the different coordinate systems and then implement functionality to convert between the two?
+
+    // I think part of what is happening is some lack of clarity regarding what the origin is. Think of the situation where you're trying to rotate a triangle but the triangle is not centered around the origin
+
+    // I mean really what's happening is that it IS rotating about the origin. but the origin here is the upper left corner--it's (0, 0)
+
+    // Point p(100, 100, 0);
+    // drawPoint(p, false);
+    // for (int i=0; i<360; ++i) {
+    //     drawPoint(rotatePointZ(p, i), false);
     // }
 
 
+    Point a(0.6, 0.5);
+    Point b(.8, .5);
+    Point c(.6, .25);
+    Triangle t(a, b, c, true, green);
+    Triangle t2(Point(0.8, 0.2), Point(0.7, .37), Point(0.67, 0.15), true, blue);
 
+    drawCoordinatePlane();
 
+    drawTriangle(t, true, false, false);
+    drawTriangle(rotateTriangleZ(t, 45), true, false, false);
 
+    drawTriangle(t2, true, false, false);
+
+    // // todo 90 degrees doesn't work or at least isn't visible:?
+    for (int i=1; i<=60; ++i) {
+        Triangle tRotated = rotateTriangleZ(t, i);
+        tRotated.color = red;
+        drawTriangle(tRotated, true, false, false);
+    }
+
+    for (int i=1; i<=60; ++i) {
+        Triangle tRotated = rotateTriangleZ(t2, i);
+        tRotated.color = yellow;
+        drawTriangle(tRotated, true, false, false);
+    }
 
 
 
 	image.write_tga_file("output.tga");
-
-
     return 0;
 }
