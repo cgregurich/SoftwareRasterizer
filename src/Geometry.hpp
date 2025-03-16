@@ -62,16 +62,16 @@ class Triangle {
         }
 
         // Points' colors uninitialized
-        Triangle(Point p0, Point p1, Point p2, Color c, bool normalized) : p0(p0), p1(p1), p2(p2), color(c), normalized(normalized) {
+        Triangle(Point p0, Point p1, Point p2, bool normalized, Color c) : p0(p0), p1(p1), p2(p2), normalized(normalized), color(c) {
 
         }
 
         // Points' colors uninitialized
-        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, Color c, bool normalized) : Triangle(Point(x0, y0), Point(x1, y1), Point(x2, y2), c, normalized ){
+        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, bool normalized, Color c) : Triangle(Point(x0, y0), Point(x1, y1), Point(x2, y2), normalized, c ){
         }
 
         // Triangle's color uninitialized
-        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, Color c0, Color c1, Color c2, bool normalized) {
+        Triangle(float x0, float y0, float x1, float y1, float x2, float y2, bool normalized, Color c0, Color c1, Color c2) {
             p0 = Point(x0, y0, 0, c0);
             p1 = Point(x1, y1, 0, c1);
             p2 = Point(x2, y2, 0, c2);
