@@ -1,3 +1,11 @@
+3/3: next things to work on:
+* Create Model class to refactor the .obj loading logic
+* Figure out how to properly parse the face elements section of .obj; at the moment, we had to just modify the data so that it only contained the indices for the position
+* windowing functionality so we can live view what we're drawing --> leads to capability for live updating the things being drawn and animations. Would be dope
+* Work on playing polysphere for coordinates and real world vs model view or something?
+----------
+
+
 Other next steps:
 * Barycentric coordinates for interpolating colors in a triangle (add color data to vertices?)
 * Dig more into the math & intuition behind the implementation of filling the triangles. Why do you need to subtract vectors to get the vector from A to B, why cross product, what is a cross product, what does it mean geometrically, etc.?
