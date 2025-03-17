@@ -15,21 +15,30 @@
 /*-------------------------------------
 IMAGE SETUP/CREATION
 -------------------------------------*/
-#define WIDTH 600
-#define HEIGHT 600
+#define WIDTH 2000
+#define HEIGHT 2000
 #define DEFAULT_COLOR black
 TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
 
 
-void drawLine(Point a, Point b, bool normalized, Color color) {
+// todo optimization opportunity: take args by reference
+void drawLine(Point a, Point b, CoordinateType coordType, Color color) {
     // This version does everything in one function
     // instead of using helper functions for high vs low lines
 
-    if (normalized) {
-        a.x *= image.get_width();
-        a.y *= image.get_height();
-        b.x *= image.get_width();
-        b.y *= image.get_height();
+    int width = image.get_width();
+    int height = image.get_height();
+
+    /* We want the coordinates to be in Screen space for the line drawing logic */
+    if (coordType == CoordinateType::NormalizedScreen) {
+        a.x *= width;
+        a.y *= height;
+        b.x *= width;
+        b.y *= height;
+    }
+    else if (coordType == CoordinateType::NDC) {
+        a = NDCToScreen(a, width, height);
+        b = NDCToScreen(b, width, height);
     }
 
     int x0, x1, y0, y1;
@@ -62,18 +71,18 @@ void drawLine(Point a, Point b, bool normalized, Color color) {
 }
 
 /* Overloaded: uses hardcoded color instead of arg */
-void drawLine(Point a, Point b, bool normalized) {
-    drawLine(a, b, normalized, DEFAULT_COLOR);
+void drawLine(Point a, Point b, CoordinateType coordType) {
+    drawLine(a, b, coordType, DEFAULT_COLOR);
 }
 
 /* Overloaded: four floats instead of two Points */
-void drawLine(float x0, float y0, float x1, float y1, bool normalized, Color color) {
-    drawLine(Point(x0, y0), Point(x1, y1), normalized, color);
+void drawLine(float x0, float y0, float x1, float y1, CoordinateType coordType, Color color) {
+    drawLine(Point(x0, y0), Point(x1, y1), coordType, color);
 }
 
 /* Overloaded: uses hardcoded color instead of arg */
-void drawLine(float x0, float y0, float x1, float y1, bool normalized) {
-    drawLine(x0, y0, x1, y1, normalized, DEFAULT_COLOR);
+void drawLine(float x0, float y0, float x1, float y1, CoordinateType coordType) {
+    drawLine(x0, y0, x1, y1, coordType, DEFAULT_COLOR);
 }
 
 
@@ -90,6 +99,8 @@ FUNCTION DEFINITIONS
 -------------------------------------*/
 /*
 Sets all pixels in the image to the given color
+FIXME: it doesn't really set the "background" color, it just
+sets the color of the entire image.
 */
 void setBackgroundColor(Color color) {
     for (int x=0; x<=image.get_width(); x++) {
@@ -110,14 +121,19 @@ Color lerpColor(Point barycentric, Color colorA, Color colorB, Color colorC) {
     return newColor;
 }
 
-void fillTriangle(Triangle t, bool lerp) {
-    if (t.normalized) {
+void fillTriangle(Triangle t, CoordinateType coordType, bool lerp) {
+    if (coordType == CoordinateType::NormalizedScreen) {
         t.p0.x *= image.get_width();
         t.p0.y *= image.get_height();
         t.p1.x *= image.get_width();
         t.p1.y *= image.get_height();
         t.p2.x *= image.get_width();
         t.p2.y *= image.get_height();
+    }
+    else if (coordType == CoordinateType::NDC) {
+        t.p0 = NDCToScreen(t.p0, WIDTH, HEIGHT);
+        t.p1 = NDCToScreen(t.p1, WIDTH, HEIGHT);
+        t.p2 = NDCToScreen(t.p2, WIDTH, HEIGHT);
     }
     for (int x=0; x<WIDTH; x++) {
         for (int y=0; y<HEIGHT; y++) {
@@ -143,7 +159,6 @@ void fillTriangle(Triangle t, bool lerp) {
                     // Blend color with bg (only has an effect if triangle's color has some transparency)
                     // Try blending with background??
                     Color bg = image.get(p.x, p.y);
-                    // printColor(bg);
                     float fgWeight = t.color.a / 255.0;
                     float bgWeight = 1 - fgWeight;
                     Color newColor = blendColors(t.color, bg, fgWeight, bgWeight);
@@ -156,15 +171,15 @@ void fillTriangle(Triangle t, bool lerp) {
     }
 }
 
-void drawTriangle(Triangle t, bool outline, bool fill, bool lerp) {
+void drawTriangle(Triangle t, CoordinateType coordType, bool outline, bool fill, bool lerp) {
     // todo interpolate points that make up lines to decide line colors. Maybe some way to make sort of a general function? Idk.
     if (outline) {
-        drawLine(t.p0, t.p1, t.normalized, t.color);
-        drawLine(t.p1, t.p2, t.normalized, t.color);
-        drawLine(t.p2, t.p0, t.normalized, t.color);
+        drawLine(t.p0, t.p1, coordType, t.color);
+        drawLine(t.p1, t.p2, coordType, t.color);
+        drawLine(t.p2, t.p0, coordType, t.color);
     }
     if (fill) {
-        fillTriangle(t, lerp);
+        fillTriangle(t, coordType, lerp);
     }
 }
 
@@ -179,33 +194,36 @@ void drawRectangle(int width, int height, Point center) {
     Point ll(center.x - (width/2), center.y + (height/2));
     Point lr(center.x + (width/2), center.y + (height/2));
 
-    drawLine(ul, ur, false, DEFAULT_COLOR);
-    drawLine(ur, lr, false, DEFAULT_COLOR);
-    drawLine(lr, ll, false, DEFAULT_COLOR);
-    drawLine(ll, ul, false, DEFAULT_COLOR);
+    drawLine(ul, ur, CoordinateType::Screen, DEFAULT_COLOR);
+    drawLine(ur, lr, CoordinateType::Screen, DEFAULT_COLOR);
+    drawLine(lr, ll, CoordinateType::Screen, DEFAULT_COLOR);
+    drawLine(ll, ul, CoordinateType::Screen, DEFAULT_COLOR);
 }
 
-/*
-Sets a point a hard-coded color
-*/
-void drawPoint(Point p, bool normalized) {
-    int x, y;
-    if (normalized) {
-        x = WIDTH * p.x;
-        y = HEIGHT * p.y;
-    }
-    else {
-        x = p.x;
-        y = p.y;
-    }
-    image.set(x, y, DEFAULT_COLOR);
-}
+void drawPoint(Point p, CoordinateType coordType) {
+    int x = 0;
+    int y = 0;
 
-/*
-Sets a point a given color
-*/
-void drawPoint(Point p, Color color) {
-    image.set(p.x, p.y, color);
+    Point screenCoords;
+
+    /* Use x and y in Screen space  */
+    switch(coordType) {
+        case CoordinateType::NDC:
+            {
+                Point screenCoords = NDCToScreen(p, WIDTH, HEIGHT);
+                break;
+            }
+        case CoordinateType::NormalizedScreen:
+            screenCoords.x = WIDTH * p.x;
+            screenCoords.y = HEIGHT * p.y;
+            break;
+        case CoordinateType::Screen:
+            screenCoords.x = p.x;
+            screenCoords.y = p.y;
+            break;
+    }
+    std::cout << "Drawing point @ (" << x << ", " << y << ")" << std::endl;
+    image.set(screenCoords.x, screenCoords.y, p.color);
 }
 
 Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p) {
@@ -231,20 +249,19 @@ void draw3DCube() {
     Color colorFront(0x9a, 0xb9, 0xd5, 0xff);
     Color colorTop(0x86, 0xad, 0xd6, 255);
 
-    Triangle a(v0, v6, v5, true, colorTop);
-    Triangle b(v0, v1, v6, true, colorTop);
-    Triangle c(v1, v2, v6, true, colorSide);
-    Triangle d(v6, v2, v3, true, colorSide);
-    Triangle e(v6, v3, v4, true, colorFront);
-    Triangle f(v5, v6, v4, true, colorFront);
+    Triangle a(v0, v6, v5, colorTop);
+    Triangle b(v0, v1, v6, colorTop);
+    Triangle c(v1, v2, v6, colorSide);
+    Triangle d(v6, v2, v3, colorSide);
+    Triangle e(v6, v3, v4, colorFront);
+    Triangle f(v5, v6, v4, colorFront);
 
     std::array<Triangle, 6> triangles = {a, b, c, d, e, f};
     
     for (int i=0; i<triangles.size(); i++) {
-        drawTriangle(triangles[i], true, true, false);
+        drawTriangle(triangles[i], CoordinateType::NormalizedScreen, true, true, false);
     }
     image.write_tga_file("output.tga");
-
 }
 
 void printColor(Color c) {
@@ -289,37 +306,6 @@ Color blendColors(Color c1, Color c2, float weight1, float weight2) {
     newGreen /= weight1 + weight2;
     newBlue /= weight1 + weight2;
     return Color(newRed, newGreen, newBlue, 255);
-}
-
-
-/*
-Convert normalized cartesian coordinates
-to normalized screen coordinates.
-Not sure if I'm using these terms correctly, so what I mean is:
-
-Screen coordinates:
-Origin in upper left
-y is positive going down
-x is positive going right
-Negative values are out of bounds
-Normalized range is 0.0 to 1.0
-
-Cartesian coordinates:
-Origin is in the center
-Left is negative x
-Right is positive x
-Down is negative y
-Up is positive y
-Negative and positive values are valid
-Normalized range is -1.0 to 1.0
-*/
-Vec3 normCartToNormScreen(Vec3 normCart, int width, int height) {
-    float screenX = normCart.x * width/2 + width/2;
-    float normScreenX = screenX / width;
-    float screenY = -(normCart.y * height/2) + width/2;
-    float normScreenY = screenY / height;
-
-    return Vec3(normScreenX, normScreenY);
 }
 
 bool parseVertexFromObjLine(std::string rawLine, Vertex &vertex) {
@@ -372,6 +358,7 @@ bool parseFaceFromObjLine(std::string rawLine, std::vector<int> &vertexIndices) 
     return true;
 }
 
+// todo fix after refactoring drawTriangle()
 void drawObj(std::string filepath, CoordinateType coordType ) {
     // Model model(filepath, coordType);
 
@@ -419,15 +406,15 @@ void drawObj(std::string filepath, CoordinateType coordType ) {
             v2 = vertices[v2Index-1];
             v3 = vertices[v3Index-1];
 
-            /* Need to convert to screen coords if the input is Cartesian */
-            if (coordType == CoordinateType::Cartesian) {
-                v1 = normCartToNormScreen(v1, WIDTH, HEIGHT);
-                v2 = normCartToNormScreen(v2, WIDTH, HEIGHT);
-                v3 = normCartToNormScreen(v3, WIDTH, HEIGHT);
+            /* Need to convert to screen coords if the input is NDC */
+            if (coordType == CoordinateType::NDC) {
+                v1 = NDCToNormalizedScreen(v1, WIDTH, HEIGHT);
+                v2 = NDCToNormalizedScreen(v2, WIDTH, HEIGHT);
+                v3 = NDCToNormalizedScreen(v3, WIDTH, HEIGHT);
             }
 
-            Triangle t(v1, v2, v3, true);
-            drawTriangle(t, true, true, false);
+            Triangle t(v1, v2, v3);
+            drawTriangle(t, CoordinateType::NormalizedScreen, true, true, false);
         }
     }
 
@@ -471,21 +458,30 @@ Point rotatePointZ(Point p, int degrees) {
 }
 
 Triangle rotateTriangleZ(Triangle t, int degrees) {
-    Point rotatedA, rotatedB, rotatedC;
-    rotatedA = rotatePointZ(t.p0, degrees);
-    rotatedB = rotatePointZ(t.p1, degrees);
-    rotatedC = rotatePointZ(t.p2, degrees);
-    Triangle rotated(rotatedA, rotatedB, rotatedC, t.normalized, yellow);
-    return rotated;
+    // Point rotatedA, rotatedB, rotatedC;
+    // rotatedA = rotatePointZ(t.p0, degrees);
+    // rotatedB = rotatePointZ(t.p1, degrees);
+    // rotatedC = rotatePointZ(t.p2, degrees);
+    // Triangle rotated(rotatedA, rotatedB, rotatedC, yellow);
+    t.p0 = rotatePointZ(t.p0, degrees);
+    t.p1 = rotatePointZ(t.p1, degrees);
+    t.p2 = rotatePointZ(t.p2, degrees);
+    return t;
 }
 
+/*
+Uses a Cartesian convention of:
+origin @ 0,0
+X and Y both have a range [-1, 1]
+*/
 void drawCoordinatePlane() {
-    Color color = white;
+    Color color = black;
     /* Draw grid */
-    drawLine(0.5, -0.1, 0.5, 1.1, true, white);
-    drawLine(-0.1, 0.5, 1.1, 0.5, true, white);
+    /* These negative values are deliberately outside of the screen's bounds */
+    drawLine(0.5, -0.1, 0.5, 1.1, CoordinateType::NormalizedScreen, color);
+    drawLine(-0.1, 0.5, 1.1, 0.5, CoordinateType::NormalizedScreen, color);
 
-    int ticks = 10;
+    int ticks = 5;
     float tickIncrement = 0.5 / ticks;
 
     /* Draw positive x ticks */
@@ -495,7 +491,7 @@ void drawCoordinatePlane() {
         tickY0 = 0.49;
         tickX1 = 0.5 + tickIncrement * i;
         tickY1 = 0.51;
-        drawLine(tickX0, tickY0, tickX1, tickY1, true, white);
+        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, color);
     }
 
     /* Draw negative x ticks */
@@ -505,7 +501,7 @@ void drawCoordinatePlane() {
         tickY0 = 0.49;
         tickX1 = 0.5 - tickIncrement * i;
         tickY1 = 0.51;
-        drawLine(tickX0, tickY0, tickX1, tickY1, true, white);
+        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, color);
     }
 
     /* Draw negative y ticks */
@@ -515,7 +511,7 @@ void drawCoordinatePlane() {
         tickY0 = 0.5 + tickIncrement * i;
         tickX1 = 0.51;
         tickY1 = 0.5 + tickIncrement * i;
-        drawLine(tickX0, tickY0, tickX1, tickY1, true, white);
+        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, color);
     }
 
     /* Draw positive y ticks */
@@ -525,64 +521,52 @@ void drawCoordinatePlane() {
         tickY0 = 0.5 - tickIncrement * i;
         tickX1 = 0.51;
         tickY1 = 0.5 - tickIncrement * i;
-        drawLine(tickX0, tickY0, tickX1, tickY1, true, white);
+        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, color);
     }
 }
 
 int main(int argc, char** argv) {
     setBackgroundColor(black);
 
+    /* todos 3/16: 
+    - Some sort of enum for triangle fill type to replace the three outline + fill + lerp args?
+    - windowing library 
+    - Test all the stuff after refactoring a bunch! Write some sort of screenshot tests perhaps?? 
+    - Refactor by making more CoordinateType conversion functions? Not really needed but could make things slightly cleaner?
+    - Split out coordinate logic from Geometry.hpp. Need to figure out the dos and don'ts of hpp vs cpp, etc.
 
-    // drawObj("obj/head copy.obj", CoordinateType::Cartesian);
+    OKay windowing needs to be next: I want to make this sick ass triangle rotation thing where the fidelity keeps increasing
+    and it has this cool animation effect. at least that's the vision.
+    */
 
-    Matrix<float> matrix(
-        {
-            {1, 2, 3},
-            {4, 5, 6},
-            {7, 8, 9}
-        }
-    );
-
-    // todo: implemented some version of rotation, but based on how the image coordinate system
-    // works, it's drawing the lower right quarter of a circle. Need to understand what's going on
-    // behind the scenes and alter the implementation to deal with it. Refresh on the different coordinate systems and then implement functionality to convert between the two?
-
-    // I think part of what is happening is some lack of clarity regarding what the origin is. Think of the situation where you're trying to rotate a triangle but the triangle is not centered around the origin
-
-    // I mean really what's happening is that it IS rotating about the origin. but the origin here is the upper left corner--it's (0, 0)
-
-    // Point p(100, 100, 0);
-    // drawPoint(p, false);
-    // for (int i=0; i<360; ++i) {
-    //     drawPoint(rotatePointZ(p, i), false);
-    // }
-
-
-    Point a(0.6, 0.5);
-    Point b(.8, .5);
-    Point c(.6, .25);
-    Triangle t(a, b, c, true, green);
-    Triangle t2(Point(0.8, 0.2), Point(0.7, .37), Point(0.67, 0.15), true, blue);
+    // drawObj("obj/head copy.obj", CoordinateType::NDC);
 
     drawCoordinatePlane();
 
-    drawTriangle(t, true, false, false);
-    drawTriangle(rotateTriangleZ(t, 45), true, false, false);
+    Point a(0.5, 0.4);
+    Point b(0.6, -0.33);
+    Point c(0, 0);
+    Triangle t(a, b, c, white);
+    drawTriangle(t, CoordinateType::NDC, true, false, false);
 
-    drawTriangle(t2, true, false, false);
+    
+    // int degrees = 10;
+    // Triangle tRotated = rotateTriangleZ(t, degrees);
+    // tRotated.color = blue;
+    // drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
 
-    // // todo 90 degrees doesn't work or at least isn't visible:?
-    for (int i=1; i<=60; ++i) {
+    for (int i=1; i<=360; i+=10) {
         Triangle tRotated = rotateTriangleZ(t, i);
-        tRotated.color = red;
-        drawTriangle(tRotated, true, false, false);
+        tRotated.color = white;
+        drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
     }
 
-    for (int i=1; i<=60; ++i) {
-        Triangle tRotated = rotateTriangleZ(t2, i);
-        tRotated.color = yellow;
-        drawTriangle(tRotated, true, false, false);
-    }
+    // for (int i=1; i<=60; ++i) {
+    //     Triangle tRotated = rotateTriangleZ(t2, i);
+    //     tRotated.color = yellow;
+    //     drawTriangle(tRotated, true, false, false);
+    // }
+
 
 
 
