@@ -11,17 +11,15 @@ class Vec3 {
         float z;
         Color color;
 
-		Vec3() : x(0), y(0), z(0) {
-		}
-		Vec3(float x, float y) : y(y), x(x), z(0) {
-		}
-		Vec3(float x, float y, Color c) : y(y), x(x), z(0), color(c) {
-		}
-		Vec3(float x, float y, float z) : y(y), x(x), z(z) {
-		}
+        /* Constructors */
+		Vec3() : x(0), y(0), z(0) {}
+		Vec3(float value) : x(value), y(value), z(value) { }
+		Vec3(float x, float y) : x(x), y(y), z(0) { }
+		Vec3(float x, float y, Color c) : x(x), y(y), z(0), color(c) {}
+		Vec3(float x, float y, float z) : x(x), y(y), z(z) {}
+		Vec3(float x, float y, float z, Color c) : x(x), y(y), z(z), color(c) {}
 
-		Vec3(float x, float y, float z, Color c) : y(y), x(x), z(z), color(c) {
-		}
+
 
         friend std::ostream& operator<<(std::ostream &os, const Vec3 &v) {
             os << "Vec3: (" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -96,7 +94,8 @@ NormalizedScreen:
     origin: upper left
 */
 enum class CoordinateType {
-    NDC,
+    NormalizedDeviceCoordinates,
+    NDC = NormalizedDeviceCoordinates,
     Screen,
     NormalizedScreen,
 };

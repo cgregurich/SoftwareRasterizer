@@ -15,8 +15,8 @@
 /*-------------------------------------
 IMAGE SETUP/CREATION
 -------------------------------------*/
-#define WIDTH 2000
-#define HEIGHT 2000
+#define WIDTH 500
+#define HEIGHT 500
 #define DEFAULT_COLOR black
 TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
 
@@ -121,25 +121,29 @@ Color lerpColor(Point barycentric, Color colorA, Color colorB, Color colorC) {
     return newColor;
 }
 
-void fillTriangle(Triangle t, CoordinateType coordType, bool lerp) {
+void fillTriangle(const Triangle t, const CoordinateType coordType, const bool lerp) {
+
+    Triangle tCopy(t);
+    
+    /* We want to work with screen coordinates for barycentric calculations */
     if (coordType == CoordinateType::NormalizedScreen) {
-        t.p0.x *= image.get_width();
-        t.p0.y *= image.get_height();
-        t.p1.x *= image.get_width();
-        t.p1.y *= image.get_height();
-        t.p2.x *= image.get_width();
-        t.p2.y *= image.get_height();
+        tCopy.p0.x *= image.get_width();
+        tCopy.p0.y *= image.get_height();
+        tCopy.p1.x *= image.get_width();
+        tCopy.p1.y *= image.get_height();
+        tCopy.p2.x *= image.get_width();
+        tCopy.p2.y *= image.get_height();
     }
     else if (coordType == CoordinateType::NDC) {
-        t.p0 = NDCToScreen(t.p0, WIDTH, HEIGHT);
-        t.p1 = NDCToScreen(t.p1, WIDTH, HEIGHT);
-        t.p2 = NDCToScreen(t.p2, WIDTH, HEIGHT);
+        tCopy.p0 = NDCToScreen(tCopy.p0, WIDTH, HEIGHT);
+        tCopy.p1 = NDCToScreen(tCopy.p1, WIDTH, HEIGHT);
+        tCopy.p2 = NDCToScreen(tCopy.p2, WIDTH, HEIGHT);
     }
     for (int x=0; x<WIDTH; x++) {
         for (int y=0; y<HEIGHT; y++) {
             Point p(x, y);
 
-            Point barycentric = calcBarycentricCoordinates(t.p0, t.p1, t.p2, p);
+            Point barycentric = calcBarycentricCoordinates(tCopy.p0, tCopy.p1, tCopy.p2, p);
 
             // p is inside the triangle and therefore should be colored
             if(barycentric.x > 0 && barycentric.y > 0 && barycentric.z > 0) {
@@ -148,10 +152,10 @@ void fillTriangle(Triangle t, CoordinateType coordType, bool lerp) {
                 if (lerp) {
 
                     // Blend A and B
-                    Color newColor = blendColors(t.p0.color, t.p1.color, barycentric.x, barycentric.y);
+                    Color newColor = blendColors(tCopy.p0.color, tCopy.p1.color, barycentric.x, barycentric.y);
 
                     // Then blend that color with C
-                    newColor = blendColors(newColor, t.p2.color, 1-barycentric.z, barycentric.z);
+                    newColor = blendColors(newColor, tCopy.p2.color, 1-barycentric.z, barycentric.z);
 
                     image.set(p.x, p.y, newColor);
                 }
@@ -159,9 +163,9 @@ void fillTriangle(Triangle t, CoordinateType coordType, bool lerp) {
                     // Blend color with bg (only has an effect if triangle's color has some transparency)
                     // Try blending with background??
                     Color bg = image.get(p.x, p.y);
-                    float fgWeight = t.color.a / 255.0;
+                    float fgWeight = tCopy.color.a / 255.0;
                     float bgWeight = 1 - fgWeight;
-                    Color newColor = blendColors(t.color, bg, fgWeight, bgWeight);
+                    Color newColor = blendColors(tCopy.color, bg, fgWeight, bgWeight);
 
                     image.set(p.x, p.y, newColor);
                 }
@@ -187,7 +191,7 @@ void drawTriangle(Triangle t, CoordinateType coordType, bool outline, bool fill,
 Draw a wireframe rectangle. Not particularly robust i.e. doesn't use
 normalized coordinates, can't be filled, etc.
 */
-void drawRectangle(int width, int height, Point center) {
+void drawRectangle(const int width, const int height, const Point center) {
 
     Point ul(center.x - (width/2), center.y - (height/2));
     Point ur(center.x + (width/2), center.y - (height/2));
@@ -200,7 +204,7 @@ void drawRectangle(int width, int height, Point center) {
     drawLine(ll, ul, CoordinateType::Screen, DEFAULT_COLOR);
 }
 
-void drawPoint(Point p, CoordinateType coordType) {
+void drawPoint(const Point p, const CoordinateType coordType) {
     int x = 0;
     int y = 0;
 
@@ -264,12 +268,12 @@ void draw3DCube() {
     image.write_tga_file("output.tga");
 }
 
-void printColor(Color c) {
+void printColor(const Color c) {
     std::cout << "Color: (" << (int)c.r << ", " << (int)c.g << ", " << (int)c.b << ")\n";
 }
 
 // FIXME
-Color blendColorsByAlpha(Color bg, Color fg) {
+Color blendColorsByAlpha(const Color bg, const Color fg) {
 
     /* Color's alpha is 0-255 but we want to work with floats for
     these calculations */
@@ -290,11 +294,11 @@ Color blendColorsByAlpha(Color bg, Color fg) {
 Overload blendColors() to easily blend two colors, using
 weight of 0.5 for both
 */
-Color blendColors(Color c1, Color c2) {
+Color blendColors(const Color c1, const Color c2) {
     return blendColors(c1, c2, 0.5, 0.5);
 }
 
-Color blendColors(Color c1, Color c2, float weight1, float weight2) {
+Color blendColors(const Color c1, const Color c2, const float weight1, const float weight2) {
 
     int newRed = c1.r * weight1 + c2.r * weight2;
     int newGreen = c1.g * weight1 + c2.g * weight2;
@@ -336,7 +340,7 @@ bool parseVertexFromObjLine(std::string rawLine, Vertex &vertex) {
     return true;
 }
 
-bool parseFaceFromObjLine(std::string rawLine, std::vector<int> &vertexIndices) {
+bool parseFaceFromObjLine(const std::string rawLine, std::vector<int> &vertexIndices) {
     std::stringstream ss(rawLine);
     std::string keyword;
     ss >> keyword;
@@ -359,7 +363,7 @@ bool parseFaceFromObjLine(std::string rawLine, std::vector<int> &vertexIndices) 
 }
 
 // todo fix after refactoring drawTriangle()
-void drawObj(std::string filepath, CoordinateType coordType ) {
+void drawObj(const std::string filepath, const CoordinateType coordType ) {
     // Model model(filepath, coordType);
 
     ///////////////
@@ -429,7 +433,7 @@ void drawObj(std::string filepath, CoordinateType coordType ) {
 #define DEG_TO_RAD(deg) deg * M_PI/180
 
 template <typename T>
-Point pointMatrixMultiply(Point p, const Matrix<T>& m) {
+Point pointMatrixMultiply(const Point p, const Matrix<T>& m) {
     if (m.getRows() != 3) {
         throw std::invalid_argument("Matrix has invalid number of rows for multiplication.");
     }
@@ -445,28 +449,39 @@ Point pointMatrixMultiply(Point p, const Matrix<T>& m) {
 /* Rotate point about the z axis */
 Point rotatePointZ(Point p, int degrees) {
     double rad = DEG_TO_RAD(degrees);
-    Matrix<double> rotateMatrix(
+    Matrix<double> matrix(
         {
             { cos(rad),     sin(rad),   0 },
             { -sin(rad),    cos(rad),   0 },
             { 0,            0,          1 }
         }
     );
-    float x, y, z;
-    Point newP = pointMatrixMultiply(p, rotateMatrix);
+    Point newP = pointMatrixMultiply(p, matrix);
     return newP;
 }
 
-Triangle rotateTriangleZ(Triangle t, int degrees) {
-    // Point rotatedA, rotatedB, rotatedC;
-    // rotatedA = rotatePointZ(t.p0, degrees);
-    // rotatedB = rotatePointZ(t.p1, degrees);
-    // rotatedC = rotatePointZ(t.p2, degrees);
-    // Triangle rotated(rotatedA, rotatedB, rotatedC, yellow);
-    t.p0 = rotatePointZ(t.p0, degrees);
-    t.p1 = rotatePointZ(t.p1, degrees);
-    t.p2 = rotatePointZ(t.p2, degrees);
-    return t;
+Triangle rotateTriangleZ(const Triangle t, const int degrees) {
+    Triangle tRotated(t);
+    tRotated.p0 = rotatePointZ(t.p0, degrees);
+    tRotated.p1 = rotatePointZ(t.p1, degrees);
+    tRotated.p2 = rotatePointZ(t.p2, degrees);
+    return tRotated;
+}
+
+Triangle scaleTriangle(const Triangle t, const Vec3 scaleFactor) {
+    Matrix<double> matrix(
+        {
+            { scaleFactor.x,        0,               0            },
+            {       0,        scaleFactor.y,         0            },
+            {       0,              0,         scaleFactor.z      }
+        }
+    );
+    Triangle newTriangle(t);
+    newTriangle.p0 = pointMatrixMultiply(newTriangle.p0, matrix);
+    newTriangle.p1 = pointMatrixMultiply(newTriangle.p1, matrix);
+    newTriangle.p2 = pointMatrixMultiply(newTriangle.p2, matrix);
+
+    return newTriangle;
 }
 
 /*
@@ -526,7 +541,7 @@ void drawCoordinatePlane() {
 }
 
 int main(int argc, char** argv) {
-    setBackgroundColor(black);
+    setBackgroundColor(white);
 
     /* todos 3/16: 
     - Some sort of enum for triangle fill type to replace the three outline + fill + lerp args?
@@ -539,27 +554,88 @@ int main(int argc, char** argv) {
     and it has this cool animation effect. at least that's the vision.
     */
 
+
+//    Point p(5, 2);
+//    Matrix<float> matrix (
+//     {
+//         { .866, -.5 },
+//         { .5, .866}
+//     }
+//    );
+//    Point newP = pointMatrixMultiply(p, matrix);
+//    std::cout << newP << std::endl;
+
     // drawObj("obj/head copy.obj", CoordinateType::NDC);
 
     drawCoordinatePlane();
 
-    Point a(0.5, 0.4);
-    Point b(0.6, -0.33);
-    Point c(0, 0);
-    Triangle t(a, b, c, white);
-    drawTriangle(t, CoordinateType::NDC, true, false, false);
+    Matrix<float> matrix(
+        {
+            { .866,  -.5,   0 },
+            { .5,     .866, 0 },
+            { 0,      0,    0 }
+        }
+    );
 
+    Vec3 vec(50, 20, 0);
+
+    Point rowVectorPoint = pointMatrixMultiply(vec, matrix);
+    Point colVectorPoint = matrix * vec;
+
+    std::cout << colVectorPoint << std::endl;
+    std::cout << rowVectorPoint << std::endl;
+
+    /* Draw lines from origin to points */
+    // drawLine(Point(0, 0), vec, CoordinateType::NDC, black);
+    // drawLine(Point(0, 0), rowVectorPoint, CoordinateType::NDC, red);
+    // drawLine(Point(0, 0), colVectorPoint, CoordinateType::NDC, green);
+
+
+
+    // Point a(0.3, .1);
+    // Point b(.4, .70);
+    // Point c(.1, .2);
+    // Triangle t(a, b, c, green);
+    // drawTriangle(t, CoordinateType::NDC, true, false, false);
+
+    // Triangle t2 = rotateTriangleZ(t, 30);
+    // t2.color = gray;
+    // drawTriangle(t2, CoordinateType::NDC, true, false, false);
+
+    // Triangle t2 = scaleTriangle(t, Vec3(1.0, 2.0, 1.0));
+    // t2.color = silver;
+    // drawTriangle(t2, CoordinateType::NDC, true, false, false);
+
+
+
+
+
+    // for (double x=0; x<5; x+=0.1) {
+    //     for (double y=0; y<5; y+=0.1) {
+
+    //     Triangle t2 = scaleTriangle(t, Vec3(1.0, y, 1.0));
+    //     t2.color = silver;
+    //     drawTriangle(t2, CoordinateType::NDC, true, false, false);
+    //     }
+        
+    // }
+
+
+    // Triangle tRotated = rotateTriangleZ(t, 90);
+    // tRotated.color = red;
+    // drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
     
     // int degrees = 10;
     // Triangle tRotated = rotateTriangleZ(t, degrees);
     // tRotated.color = blue;
     // drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
 
-    for (int i=1; i<=360; i+=10) {
-        Triangle tRotated = rotateTriangleZ(t, i);
-        tRotated.color = white;
-        drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
-    }
+    // int increment = 90;
+    // for (int i=increment; i<360; i+=increment) {
+    //     Triangle tRotated = rotateTriangleZ(t, i);
+    //     tRotated.color = red;
+    //     drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
+    // }
 
     // for (int i=1; i<=60; ++i) {
     //     Triangle tRotated = rotateTriangleZ(t2, i);

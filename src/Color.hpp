@@ -14,7 +14,6 @@ const Color blue(0,0,255, 255);
 const Color yellow(255,255,0, 255);
 const Color cyan(0,255,255, 255);
 const Color magenta(255,0,255, 255);
-const Color lime(0,255,0, 255);
 const Color silver(192,192,192, 255);
 const Color gray(128,128,128, 255);
 const Color maroon(128,0,0, 255);
