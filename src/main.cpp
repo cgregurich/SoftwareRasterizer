@@ -8,8 +8,10 @@
 #include <regex>
 #include <cmath>
 
-#include "Geometry.hpp"
 #include "Matrix.hpp"
+#include "CoordinateSpaces.hpp"
+#include "Vec.hpp"
+#include "Triangle.hpp"
 
 
 /*-------------------------------------
@@ -148,10 +150,10 @@ void fillTriangle(Triangle t, CoordinateType coordType, bool lerp) {
                 if (lerp) {
 
                     // Blend A and B
-                    Color newColor = blendColors(t.p0.color, t.p1.color, barycentric.x, barycentric.y);
+                    Color newColor = blendColors(t.p0Color, t.p1Color, barycentric.x, barycentric.y);
 
                     // Then blend that color with C
-                    newColor = blendColors(newColor, t.p2.color, 1-barycentric.z, barycentric.z);
+                    newColor = blendColors(newColor, t.p2Color, 1-barycentric.z, barycentric.z);
 
                     image.set(p.x, p.y, newColor);
                 }
@@ -200,7 +202,7 @@ void drawRectangle(int width, int height, Point center) {
     drawLine(ll, ul, CoordinateType::Screen, DEFAULT_COLOR);
 }
 
-void drawPoint(Point p, CoordinateType coordType) {
+void drawPoint(Point p, Color color, CoordinateType coordType) {
     int x = 0;
     int y = 0;
 
@@ -223,7 +225,7 @@ void drawPoint(Point p, CoordinateType coordType) {
             break;
     }
     std::cout << "Drawing point @ (" << x << ", " << y << ")" << std::endl;
-    image.set(screenCoords.x, screenCoords.y, p.color);
+    image.set(screenCoords.x, screenCoords.y, color);
 }
 
 Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p) {
@@ -237,13 +239,13 @@ Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p) {
 Very specific sandbox function. Probably not needed
 */
 void draw3DCube() {
-    Vec3 v0(.3,  .25,   0, black);
-    Vec3 v1(.5,  .25,   0, cyan);
-    Vec3 v2(.5,  .425,  0, cyan);
-    Vec3 v3(.4,  .6,    0, cyan);
-    Vec3 v4(.2,  .6,    0, cyan);
-    Vec3 v5(.2,  .4,    0, cyan);
-    Vec3 v6(.4,  .4,    0, white);
+    Vec3 v0(.3,  .25,   0);
+    Vec3 v1(.5,  .25,   0);
+    Vec3 v2(.5,  .425,  0);
+    Vec3 v3(.4,  .6,    0);
+    Vec3 v4(.2,  .6,    0);
+    Vec3 v5(.2,  .4,    0);
+    Vec3 v6(.4,  .4,    0);
 
     Color colorSide(0xca, 0xdb, 0xed, 0xff);
     Color colorFront(0x9a, 0xb9, 0xd5, 0xff);
@@ -358,7 +360,6 @@ bool parseFaceFromObjLine(std::string rawLine, std::vector<int> &vertexIndices) 
     return true;
 }
 
-// todo fix after refactoring drawTriangle()
 void drawObj(std::string filepath, CoordinateType coordType ) {
     // Model model(filepath, coordType);
 
@@ -566,12 +567,12 @@ class CoordinatePlane {
                 std::cerr << "[Warning]: passed `gridResolution` is not even. This may cause unexpected results." << std::endl;
             }
         }
-        void drawVector(Vec3 v) {
+        void drawVector(Vec3 v, Color color) {
             /* Convert grid coordinates to NDC */
             float ndcX = v.x / (gridResolution / 2);
             float ndcY = v.y / (gridResolution / 2);
             // Draw main vector line
-            ::drawLine(0, 0, ndcX, ndcY, CoordinateType::NDC, v.color);
+            ::drawLine(0, 0, ndcX, ndcY, CoordinateType::NDC, color);
             // Draw arrow head // todo gotta use some math to figure this out hmmmm
         }
 
@@ -707,7 +708,7 @@ void gridCLI(CoordinatePlane grid) {
                 std::cout << "draw todo" << std::endl;
                 point = getPointFromUser();
                 std::cout << point << std::endl;
-                grid.drawVector(point);
+                grid.drawVector(point, DEFAULT_COLOR);
                 std::cout << "draw vector done" << std::endl;
                 break;
             case 'c':
@@ -724,7 +725,7 @@ void gridCLI(CoordinatePlane grid) {
 }
 
 int main(int argc, char** argv) {
-    // setBackgroundColor(white);
+    setBackgroundColor(white);
 
     /* todos 3/16: 
     - Some sort of enum for triangle fill type to replace the three outline + fill + lerp args?
@@ -738,15 +739,11 @@ int main(int argc, char** argv) {
     */
 
     // drawObj("obj/head copy.obj", CoordinateType::NDC);
+    draw3DCube();
 
-    // drawCoordinatePlane(true);
-    // drawGrid(5);
-
-    // drawVector(3, 4)
-
-    CoordinatePlane grid(20);
-    grid.drawGrid();
-    gridCLI(grid);
+    // CoordinatePlane grid(20);
+    // grid.drawGrid();
+    // gridCLI(grid);
 
     // Vec3 v1(-5, 2, 0, green);
     // Vec3 v2(3, -2.7, orange);
