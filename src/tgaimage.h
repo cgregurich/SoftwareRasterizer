@@ -58,6 +58,14 @@ struct TGAColor {
 		return *this;
 	}
 
+    bool operator==(const TGAColor &other) {
+        return this->val == other.val;
+    }
+
+    bool operator!=(const TGAColor &other) {
+        return !(*this == other);
+    }
+
 };
 
 
