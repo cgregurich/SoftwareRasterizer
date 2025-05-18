@@ -22,7 +22,8 @@ NormalizedScreen:
     origin: upper left
 */
 enum class CoordinateType {
-    NDC,
+    NormalizedDeviceCoordinates,
+    NDC = NormalizedDeviceCoordinates,
     Screen,
     NormalizedScreen,
 };
