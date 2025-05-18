@@ -15,8 +15,8 @@
 /*-------------------------------------
 IMAGE SETUP/CREATION
 -------------------------------------*/
-#define WIDTH 2000
-#define HEIGHT 2000
+#define WIDTH 500
+#define HEIGHT 500
 #define DEFAULT_COLOR black
 TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
 
@@ -471,62 +471,260 @@ Triangle rotateTriangleZ(Triangle t, int degrees) {
 
 /*
 Uses a Cartesian convention of:
-origin @ 0,0
+origin @ 0,0 (center of screen)
 X and Y both have a range [-1, 1]
 */
-void drawCoordinatePlane() {
-    Color color = black;
+void drawCoordinatePlane(bool drawGridLines) {
+    /* Colors to use throughout */
+    Color tickColor(200, 200, 200, 255); // Color to use for grid lines/ticks
+    Color xAxisColor(200, 0, 0, 255);
+    Color yAxisColor(0, 200, 0, 255);
+
     /* Draw grid */
     /* These negative values are deliberately outside of the screen's bounds */
-    drawLine(0.5, -0.1, 0.5, 1.1, CoordinateType::NormalizedScreen, color);
-    drawLine(-0.1, 0.5, 1.1, 0.5, CoordinateType::NormalizedScreen, color);
+    drawLine(0.5, -0.1, 0.5, 1.1, CoordinateType::NormalizedScreen, yAxisColor);
+    drawLine(-0.1, 0.5, 1.1, 0.5, CoordinateType::NormalizedScreen, xAxisColor);
 
     int ticks = 5;
     float tickIncrement = 0.5 / ticks;
 
-    /* Draw positive x ticks */
+    /* Draw positive x grid lines/ticks */
     for (int i=1; i<=ticks; ++i) {
         float tickX0, tickY0, tickX1, tickY1;
+
         tickX0 = 0.5 + tickIncrement * i;
-        tickY0 = 0.49;
         tickX1 = 0.5 + tickIncrement * i;
-        tickY1 = 0.51;
-        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, color);
+
+        // Draw either full grid lines or just a short tick
+        tickY0 = drawGridLines ? -.01 : 0.49;
+        tickY1 = drawGridLines ? 1.01 : 0.51;
+
+        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
     }
 
-    /* Draw negative x ticks */
+    /* Draw negative x grid lines/ticks */
     for (int i=1; i<=ticks; ++i) {
         float tickX0, tickY0, tickX1, tickY1;
+
         tickX0 = 0.5 - tickIncrement * i;
-        tickY0 = 0.49;
         tickX1 = 0.5 - tickIncrement * i;
-        tickY1 = 0.51;
-        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, color);
+
+        // Draw either full grid lines or just a short tick
+        tickY0 = drawGridLines ? -.01 : .49;
+        tickY1 = drawGridLines ? 1.01 : 0.51;
+
+        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
     }
 
-    /* Draw negative y ticks */
+    /* Draw negative y grid lines/ticks */
     for (int i=1; i<=ticks; ++i) {
         float tickX0, tickY0, tickX1, tickY1;
-        tickX0 = 0.49;
+
+        // Draw either full grid lines or just a short tick
+        tickX0 = drawGridLines ? -.01 : 0.49;
+        tickX1 = drawGridLines ? 1.01 : 0.51;
+
         tickY0 = 0.5 + tickIncrement * i;
-        tickX1 = 0.51;
         tickY1 = 0.5 + tickIncrement * i;
-        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, color);
+
+        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
     }
 
-    /* Draw positive y ticks */
+    /* Draw positive y grid lines/ticks */
     for (int i=1; i<=ticks; ++i) {
         float tickX0, tickY0, tickX1, tickY1;
-        tickX0 = 0.49;
+
+        // Draw either full grid lines or just a short tick
+        tickX0 = drawGridLines ? -.01 : 0.49;
+        tickX1 = drawGridLines ? 1.01 : 0.51;
+
         tickY0 = 0.5 - tickIncrement * i;
-        tickX1 = 0.51;
         tickY1 = 0.5 - tickIncrement * i;
-        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, color);
+
+        drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
+    }
+}
+
+void drawGrid(int ticks) {
+    /* Draw center lines */
+    /* x-axis */
+    drawLine(-1.1, 0.5, 1.1, 0.5, CoordinateType::NormalizedScreen, red);
+    /* y-axis */
+    drawLine(0.5, -1.1, 0.5, 1.1, CoordinateType::NormalizedScreen, green);
+
+
+}
+
+class CoordinatePlane {
+    public:
+        /* gridResolution is total number of lines in either x and y direction
+        (currently only supports equal width and height)
+        eg. if you want to be able to map a point at (11, 0) the resolution will
+        need to be at least 22 (-11 to the left and +11 to the right) */
+        CoordinatePlane(int gridResolution) : gridResolution(gridResolution) {
+            if (gridResolution % 2 != 0) {
+                std::cerr << "[Warning]: passed `gridResolution` is not even. This may cause unexpected results." << std::endl;
+            }
+        }
+        void drawVector(Vec3 v) {
+            /* Convert grid coordinates to NDC */
+            float ndcX = v.x / (gridResolution / 2);
+            float ndcY = v.y / (gridResolution / 2);
+            // Draw main vector line
+            ::drawLine(0, 0, ndcX, ndcY, CoordinateType::NDC, v.color);
+            // Draw arrow head // todo gotta use some math to figure this out hmmmm
+        }
+
+        /* todo this is not laid out well and is quite confusing.
+        `origin` is used both as a vector and a point. It's passed in to
+        drawLine as the starting point for the line to be drawn. But it's also
+        used as the "vector" from which to start drawing the new vector
+        */
+        
+        void drawVectorFromPoint(Vec3 v, Vec3 origin) {
+            v = v + origin;
+            std::cout << "drawVectorFromPoint:\n";
+            std::cout << "\tv: " << v << "\n";
+            std::cout << "\torigin: " << origin << "\n";
+            float ndcX = v.x / (gridResolution / 2);
+            float ndcY = v.y / (gridResolution / 2);
+            float ndcOriginX = origin.x / (gridResolution / 2);
+            float ndcOriginY = origin.y / (gridResolution / 2);
+
+            ::drawLine(ndcOriginX, ndcOriginY, ndcX, ndcY, CoordinateType::NDC, magenta);
+        }
+
+        void drawGrid() {
+            setBackgroundColor(white);
+            /* Colors to use throughout */
+            Color tickColor(200, 200, 200, 255); // Color to use for grid lines/ticks
+            Color xAxisColor(200, 0, 0, 255);
+            Color yAxisColor(0, 200, 0, 255);
+
+            /* Draw grid */
+
+            int ticks = gridResolution / 2;
+            float tickIncrement = 0.5 / ticks;
+
+            /* Draw positive x grid lines */
+            for (int i=1; i<=ticks; ++i) {
+                float tickX0, tickY0, tickX1, tickY1;
+
+                tickX0 = 0.5 + tickIncrement * i;
+                tickX1 = 0.5 + tickIncrement * i;
+
+                tickY0 = -.01;
+                tickY1 = 1.01;
+
+                ::drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
+            }
+
+            /* Draw negative x grid lines */
+            for (int i=1; i<=ticks; ++i) {
+                float tickX0, tickY0, tickX1, tickY1;
+
+                tickX0 = 0.5 - tickIncrement * i;
+                tickX1 = 0.5 - tickIncrement * i;
+
+                tickY0 = -.01;
+                tickY1 = 1.01;
+
+                ::drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
+            }
+
+            /* Draw negative y grid lines */
+            for (int i=1; i<=ticks; ++i) {
+                float tickX0, tickY0, tickX1, tickY1;
+
+                tickX0 = -.01;
+                tickX1 = 1.01;
+
+                tickY0 = 0.5 + tickIncrement * i;
+                tickY1 = 0.5 + tickIncrement * i;
+
+                ::drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
+            }
+
+            /* Draw positive y grid lines */
+            for (int i=1; i<=ticks; ++i) {
+                float tickX0, tickY0, tickX1, tickY1;
+
+                tickX0 = -.01;
+                tickX1 = 1.01;
+
+                tickY0 = 0.5 - tickIncrement * i;
+                tickY1 = 0.5 - tickIncrement * i;
+
+                ::drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
+            }
+
+
+            /* Draw x and y axes */
+            /* These negative values are deliberately outside of the screen's bounds */
+            ::drawLine(0.5, -0.1, 0.5, 1.1, CoordinateType::NormalizedScreen, yAxisColor);
+            ::drawLine(-0.1, 0.5, 1.1, 0.5, CoordinateType::NormalizedScreen, xAxisColor);
+        }
+    private:
+        int gridResolution;
+};
+
+void showMenu() {
+    std::cout << "MENU\n";
+    std::cout << "\tc - clear\n";
+    std::cout << "\td - draw line\n";
+    std::cout << "\tm - show menu\n";
+    std::cout << "\tq - quit\n";
+}
+Point getPointFromUser() {
+    // todo add loop and error checking
+    float x, y;
+    std::cout << "Enter x: ";
+    std::cin >> x;
+    std::cout << "Enter y: ";
+    std::cin >> y;
+    std::cout << "returning point" << std::endl;
+    return Point(x, y);
+    
+}
+void gridCLI(CoordinatePlane grid) {
+    char command;
+    bool quit = false;
+    Point point;
+    showMenu();
+    while (!quit) {
+        image.write_tga_file("output.tga");
+        std::cout << "Enter command: ";
+
+        // Grab just the first character and throw away the rest
+        std::cin >> command;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        switch(command) {
+            case 'q':
+                quit = true;
+                break;
+            case 'd':
+                std::cout << "draw todo" << std::endl;
+                point = getPointFromUser();
+                std::cout << point << std::endl;
+                grid.drawVector(point);
+                std::cout << "draw vector done" << std::endl;
+                break;
+            case 'c':
+                std::cout << "clear todo" << std::endl;
+                break;
+            case 'm':
+                showMenu(); 
+                break;
+            default:
+                std::cout << "invalid command" << std::endl;
+                break;
+        }
     }
 }
 
 int main(int argc, char** argv) {
-    setBackgroundColor(black);
+    // setBackgroundColor(white);
 
     /* todos 3/16: 
     - Some sort of enum for triangle fill type to replace the three outline + fill + lerp args?
@@ -541,34 +739,26 @@ int main(int argc, char** argv) {
 
     // drawObj("obj/head copy.obj", CoordinateType::NDC);
 
-    drawCoordinatePlane();
+    // drawCoordinatePlane(true);
+    // drawGrid(5);
 
-    Point a(0.5, 0.4);
-    Point b(0.6, -0.33);
-    Point c(0, 0);
-    Triangle t(a, b, c, white);
-    drawTriangle(t, CoordinateType::NDC, true, false, false);
+    // drawVector(3, 4)
 
+    CoordinatePlane grid(20);
+    grid.drawGrid();
+    gridCLI(grid);
+
+    // Vec3 v1(-5, 2, 0, green);
+    // Vec3 v2(3, -2.7, orange);
+    // // Vec3 v3 = v1 - v2;
+    // Vec3 v3 = Vec3::cross(v1, v2);
+    // std::cout << v3 << std::endl;
+
+    // grid.drawVector(v1);
+    // grid.drawVector(v2);
+    // grid.drawVector(v3);
+    // grid.drawVectorFromPoint(v3, v2);
     
-    // int degrees = 10;
-    // Triangle tRotated = rotateTriangleZ(t, degrees);
-    // tRotated.color = blue;
-    // drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
-
-    for (int i=1; i<=360; i+=10) {
-        Triangle tRotated = rotateTriangleZ(t, i);
-        tRotated.color = white;
-        drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
-    }
-
-    // for (int i=1; i<=60; ++i) {
-    //     Triangle tRotated = rotateTriangleZ(t2, i);
-    //     tRotated.color = yellow;
-    //     drawTriangle(tRotated, true, false, false);
-    // }
-
-
-
 
 	image.write_tga_file("output.tga");
     return 0;
