@@ -1,3 +1,6 @@
+#pragma once
+#include "Vec.hpp"
+
 template <typename T> class Matrix {
     private:
         std::vector<std::vector<T>> m;

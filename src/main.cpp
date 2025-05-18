@@ -8,8 +8,10 @@
 #include <regex>
 #include <cmath>
 
-#include "Geometry.hpp"
 #include "Matrix.hpp"
+#include "CoordinateSpaces.hpp"
+#include "Vec.hpp"
+#include "Triangle.hpp"
 
 
 /*-------------------------------------
@@ -152,10 +154,10 @@ void fillTriangle(const Triangle t, const CoordinateType coordType, const bool l
                 if (lerp) {
 
                     // Blend A and B
-                    Color newColor = blendColors(tCopy.p0.color, tCopy.p1.color, barycentric.x, barycentric.y);
+                    Color newColor = blendColors(t.p0Color, t.p1Color, barycentric.x, barycentric.y);
 
                     // Then blend that color with C
-                    newColor = blendColors(newColor, tCopy.p2.color, 1-barycentric.z, barycentric.z);
+                    newColor = blendColors(newColor, t.p2Color, 1-barycentric.z, barycentric.z);
 
                     image.set(p.x, p.y, newColor);
                 }
@@ -204,7 +206,7 @@ void drawRectangle(const int width, const int height, const Point center) {
     drawLine(ll, ul, CoordinateType::Screen, DEFAULT_COLOR);
 }
 
-void drawPoint(const Point p, const CoordinateType coordType) {
+void drawPoint(Point p, Color color, CoordinateType coordType) {
     int x = 0;
     int y = 0;
 
@@ -227,7 +229,7 @@ void drawPoint(const Point p, const CoordinateType coordType) {
             break;
     }
     std::cout << "Drawing point @ (" << x << ", " << y << ")" << std::endl;
-    image.set(screenCoords.x, screenCoords.y, p.color);
+    image.set(screenCoords.x, screenCoords.y, color);
 }
 
 Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p) {
@@ -241,13 +243,13 @@ Point calcBarycentricCoordinates(Point a, Point b, Point c, Point p) {
 Very specific sandbox function. Probably not needed
 */
 void draw3DCube() {
-    Vec3 v0(.3,  .25,   0, black);
-    Vec3 v1(.5,  .25,   0, cyan);
-    Vec3 v2(.5,  .425,  0, cyan);
-    Vec3 v3(.4,  .6,    0, cyan);
-    Vec3 v4(.2,  .6,    0, cyan);
-    Vec3 v5(.2,  .4,    0, cyan);
-    Vec3 v6(.4,  .4,    0, white);
+    Vec3 v0(.3,  .25,   0);
+    Vec3 v1(.5,  .25,   0);
+    Vec3 v2(.5,  .425,  0);
+    Vec3 v3(.4,  .6,    0);
+    Vec3 v4(.2,  .6,    0);
+    Vec3 v5(.2,  .4,    0);
+    Vec3 v6(.4,  .4,    0);
 
     Color colorSide(0xca, 0xdb, 0xed, 0xff);
     Color colorFront(0x9a, 0xb9, 0xd5, 0xff);
@@ -536,7 +538,186 @@ void drawCoordinatePlane() {
         tickY0 = 0.5 - tickIncrement * i;
         tickX1 = 0.51;
         tickY1 = 0.5 - tickIncrement * i;
+
         drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, color);
+    }
+}
+
+void drawGrid(int ticks) {
+    /* Draw center lines */
+    /* x-axis */
+    drawLine(-1.1, 0.5, 1.1, 0.5, CoordinateType::NormalizedScreen, red);
+    /* y-axis */
+    drawLine(0.5, -1.1, 0.5, 1.1, CoordinateType::NormalizedScreen, green);
+
+
+}
+
+class CoordinatePlane {
+    public:
+        /* gridResolution is total number of lines in either x and y direction
+        (currently only supports equal width and height)
+        eg. if you want to be able to map a point at (11, 0) the resolution will
+        need to be at least 22 (-11 to the left and +11 to the right) */
+        CoordinatePlane(int gridResolution) : gridResolution(gridResolution) {
+            if (gridResolution % 2 != 0) {
+                std::cerr << "[Warning]: passed `gridResolution` is not even. This may cause unexpected results." << std::endl;
+            }
+        }
+        void drawVector(Vec3 v, Color color) {
+            /* Convert grid coordinates to NDC */
+            float ndcX = v.x / (gridResolution / 2);
+            float ndcY = v.y / (gridResolution / 2);
+            // Draw main vector line
+            ::drawLine(0, 0, ndcX, ndcY, CoordinateType::NDC, color);
+            // Draw arrow head // todo gotta use some math to figure this out hmmmm
+        }
+
+        /* todo this is not laid out well and is quite confusing.
+        `origin` is used both as a vector and a point. It's passed in to
+        drawLine as the starting point for the line to be drawn. But it's also
+        used as the "vector" from which to start drawing the new vector
+        */
+        
+        void drawVectorFromPoint(Vec3 v, Vec3 origin) {
+            v = v + origin;
+            std::cout << "drawVectorFromPoint:\n";
+            std::cout << "\tv: " << v << "\n";
+            std::cout << "\torigin: " << origin << "\n";
+            float ndcX = v.x / (gridResolution / 2);
+            float ndcY = v.y / (gridResolution / 2);
+            float ndcOriginX = origin.x / (gridResolution / 2);
+            float ndcOriginY = origin.y / (gridResolution / 2);
+
+            ::drawLine(ndcOriginX, ndcOriginY, ndcX, ndcY, CoordinateType::NDC, magenta);
+        }
+
+        void drawGrid() {
+            setBackgroundColor(white);
+            /* Colors to use throughout */
+            Color tickColor(200, 200, 200, 255); // Color to use for grid lines/ticks
+            Color xAxisColor(200, 0, 0, 255);
+            Color yAxisColor(0, 200, 0, 255);
+
+            /* Draw grid */
+
+            int ticks = gridResolution / 2;
+            float tickIncrement = 0.5 / ticks;
+
+            /* Draw positive x grid lines */
+            for (int i=1; i<=ticks; ++i) {
+                float tickX0, tickY0, tickX1, tickY1;
+
+                tickX0 = 0.5 + tickIncrement * i;
+                tickX1 = 0.5 + tickIncrement * i;
+
+                tickY0 = -.01;
+                tickY1 = 1.01;
+
+                ::drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
+            }
+
+            /* Draw negative x grid lines */
+            for (int i=1; i<=ticks; ++i) {
+                float tickX0, tickY0, tickX1, tickY1;
+
+                tickX0 = 0.5 - tickIncrement * i;
+                tickX1 = 0.5 - tickIncrement * i;
+
+                tickY0 = -.01;
+                tickY1 = 1.01;
+
+                ::drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
+            }
+
+            /* Draw negative y grid lines */
+            for (int i=1; i<=ticks; ++i) {
+                float tickX0, tickY0, tickX1, tickY1;
+
+                tickX0 = -.01;
+                tickX1 = 1.01;
+
+                tickY0 = 0.5 + tickIncrement * i;
+                tickY1 = 0.5 + tickIncrement * i;
+
+                ::drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
+            }
+
+            /* Draw positive y grid lines */
+            for (int i=1; i<=ticks; ++i) {
+                float tickX0, tickY0, tickX1, tickY1;
+
+                tickX0 = -.01;
+                tickX1 = 1.01;
+
+                tickY0 = 0.5 - tickIncrement * i;
+                tickY1 = 0.5 - tickIncrement * i;
+
+                ::drawLine(tickX0, tickY0, tickX1, tickY1, CoordinateType::NormalizedScreen, tickColor);
+            }
+
+
+            /* Draw x and y axes */
+            /* These negative values are deliberately outside of the screen's bounds */
+            ::drawLine(0.5, -0.1, 0.5, 1.1, CoordinateType::NormalizedScreen, yAxisColor);
+            ::drawLine(-0.1, 0.5, 1.1, 0.5, CoordinateType::NormalizedScreen, xAxisColor);
+        }
+    private:
+        int gridResolution;
+};
+
+void showMenu() {
+    std::cout << "MENU\n";
+    std::cout << "\tc - clear\n";
+    std::cout << "\td - draw line\n";
+    std::cout << "\tm - show menu\n";
+    std::cout << "\tq - quit\n";
+}
+Point getPointFromUser() {
+    // todo add loop and error checking
+    float x, y;
+    std::cout << "Enter x: ";
+    std::cin >> x;
+    std::cout << "Enter y: ";
+    std::cin >> y;
+    std::cout << "returning point" << std::endl;
+    return Point(x, y);
+    
+}
+void gridCLI(CoordinatePlane grid) {
+    char command;
+    bool quit = false;
+    Point point;
+    showMenu();
+    while (!quit) {
+        image.write_tga_file("output.tga");
+        std::cout << "Enter command: ";
+
+        // Grab just the first character and throw away the rest
+        std::cin >> command;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        switch(command) {
+            case 'q':
+                quit = true;
+                break;
+            case 'd':
+                std::cout << "draw todo" << std::endl;
+                point = getPointFromUser();
+                std::cout << point << std::endl;
+                grid.drawVector(point, DEFAULT_COLOR);
+                std::cout << "draw vector done" << std::endl;
+                break;
+            case 'c':
+                std::cout << "clear todo" << std::endl;
+                break;
+            case 'm':
+                showMenu(); 
+                break;
+            default:
+                std::cout << "invalid command" << std::endl;
+                break;
+        }
     }
 }
 
@@ -554,96 +735,7 @@ int main(int argc, char** argv) {
     and it has this cool animation effect. at least that's the vision.
     */
 
-
-//    Point p(5, 2);
-//    Matrix<float> matrix (
-//     {
-//         { .866, -.5 },
-//         { .5, .866}
-//     }
-//    );
-//    Point newP = pointMatrixMultiply(p, matrix);
-//    std::cout << newP << std::endl;
-
-    // drawObj("obj/head copy.obj", CoordinateType::NDC);
-
-    drawCoordinatePlane();
-
-    Matrix<float> matrix(
-        {
-            { .866,  -.5,   0 },
-            { .5,     .866, 0 },
-            { 0,      0,    0 }
-        }
-    );
-
-    Vec3 vec(50, 20, 0);
-
-    Point rowVectorPoint = pointMatrixMultiply(vec, matrix);
-    Point colVectorPoint = matrix * vec;
-
-    std::cout << colVectorPoint << std::endl;
-    std::cout << rowVectorPoint << std::endl;
-
-    /* Draw lines from origin to points */
-    // drawLine(Point(0, 0), vec, CoordinateType::NDC, black);
-    // drawLine(Point(0, 0), rowVectorPoint, CoordinateType::NDC, red);
-    // drawLine(Point(0, 0), colVectorPoint, CoordinateType::NDC, green);
-
-
-
-    // Point a(0.3, .1);
-    // Point b(.4, .70);
-    // Point c(.1, .2);
-    // Triangle t(a, b, c, green);
-    // drawTriangle(t, CoordinateType::NDC, true, false, false);
-
-    // Triangle t2 = rotateTriangleZ(t, 30);
-    // t2.color = gray;
-    // drawTriangle(t2, CoordinateType::NDC, true, false, false);
-
-    // Triangle t2 = scaleTriangle(t, Vec3(1.0, 2.0, 1.0));
-    // t2.color = silver;
-    // drawTriangle(t2, CoordinateType::NDC, true, false, false);
-
-
-
-
-
-    // for (double x=0; x<5; x+=0.1) {
-    //     for (double y=0; y<5; y+=0.1) {
-
-    //     Triangle t2 = scaleTriangle(t, Vec3(1.0, y, 1.0));
-    //     t2.color = silver;
-    //     drawTriangle(t2, CoordinateType::NDC, true, false, false);
-    //     }
-        
-    // }
-
-
-    // Triangle tRotated = rotateTriangleZ(t, 90);
-    // tRotated.color = red;
-    // drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
     
-    // int degrees = 10;
-    // Triangle tRotated = rotateTriangleZ(t, degrees);
-    // tRotated.color = blue;
-    // drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
-
-    // int increment = 90;
-    // for (int i=increment; i<360; i+=increment) {
-    //     Triangle tRotated = rotateTriangleZ(t, i);
-    //     tRotated.color = red;
-    //     drawTriangle(tRotated, CoordinateType::NDC, true, false, false);
-    // }
-
-    // for (int i=1; i<=60; ++i) {
-    //     Triangle tRotated = rotateTriangleZ(t2, i);
-    //     tRotated.color = yellow;
-    //     drawTriangle(tRotated, true, false, false);
-    // }
-
-
 
 
 	image.write_tga_file("output.tga");
