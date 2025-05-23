@@ -13,12 +13,14 @@
 #include "Vec.hpp"
 #include "Triangle.hpp"
 
+Triangle scaleTriangle(const Triangle t, const Vec3 scaleFactor);
+Triangle rotateTriangleZ(const Triangle t, const int degrees);
 
 /*-------------------------------------
 IMAGE SETUP/CREATION
 -------------------------------------*/
-#define WIDTH 500
-#define HEIGHT 500
+#define WIDTH 300
+#define HEIGHT 300
 #define DEFAULT_COLOR black
 TGAImage image(WIDTH, HEIGHT, TGAImage::RGB);
 
@@ -364,6 +366,7 @@ bool parseFaceFromObjLine(const std::string rawLine, std::vector<int> &vertexInd
     return true;
 }
 
+
 // todo fix after refactoring drawTriangle()
 void drawObj(const std::string filepath, const CoordinateType coordType ) {
     // Model model(filepath, coordType);
@@ -420,7 +423,9 @@ void drawObj(const std::string filepath, const CoordinateType coordType ) {
             }
 
             Triangle t(v1, v2, v3);
+            Triangle newT = rotateTriangleZ(t, 90);
             drawTriangle(t, CoordinateType::NormalizedScreen, true, true, false);
+            // drawTriangle(newT, CoordinateType::NormalizedScreen, true, true, false);
         }
     }
 
@@ -721,6 +726,10 @@ void gridCLI(CoordinatePlane grid) {
     }
 }
 
+// Triangle translateTriangle(const Triangle t, Vec3 translation) {
+
+// }
+
 int main(int argc, char** argv) {
     setBackgroundColor(white);
 
@@ -734,6 +743,35 @@ int main(int argc, char** argv) {
     OKay windowing needs to be next: I want to make this sick ass triangle rotation thing where the fidelity keeps increasing
     and it has this cool animation effect. at least that's the vision.
     */
+
+    // drawObj("obj/head copy.obj", CoordinateType::NDC);
+    Triangle t(Point(0.5, 0.5), Point(0.25, 0.25), Point(0.75, 0.25));
+    Matrix<double> translationMatrix(
+        {
+            { 1, 0, 0, 0.2 },
+            { 0, 1, 0, .5 },
+            { 0, 0, 1, 0 },
+            { 0, 0, 0, 1 }
+        }
+    );
+    Vec4 a(t.p0);
+    Vec4 b(t.p1);
+    Vec4 c(t.p2);
+    a = translationMatrix * a;
+    b = translationMatrix * b;
+    c = translationMatrix * c;
+
+    Triangle translatedTriangle(Point(a.x, a.y), Point(b.x, b.y), Point(c.x, c.y), red);
+    std::cout << a << std::endl;
+    std::cout << b << std::endl;
+    std::cout << c << std::endl;
+    drawTriangle(t, CoordinateType::NDC, true, false, false);
+    drawTriangle(translatedTriangle, CoordinateType::NDC, true, false, false);
+
+    // drawTriangle(t, CoordinateType::NormalizedScreen, true, false, false);
+    // Triangle t2 = rotateTriangleZ(t, 30);
+    // t2.color = green;
+    // drawTriangle(t2, CoordinateType::NormalizedScreen, true, false, false);
 
     
 

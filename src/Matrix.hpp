@@ -40,6 +40,19 @@ template <typename T> class Matrix {
             return result;
         }
 
+        const Vec4 operator*(Vec4 vec) {
+            if (cols != 4) {
+                throw std::invalid_argument("Matrix must have 4 columns to multiply by a Vec3");
+            }
+            Vec4 result;
+            result.x = m[0][0] * vec.x + m[0][1] * vec.y + m[0][2] * vec.z + m[0][3] * vec.w;
+            result.y = m[1][0] * vec.x + m[1][1] * vec.y + m[1][2] * vec.z + m[1][3] * vec.w;
+            result.z = m[2][0] * vec.x + m[2][1] * vec.y + m[2][2] * vec.z + m[2][3] * vec.w;
+            result.w = 1; // todo something about 1 vs 0 for direction vs _____??
+
+            return result;
+        }
+
         void print() {
             for (int i=0; i<rows; ++i) {
                 for (int j=0; j<cols; ++j) {
