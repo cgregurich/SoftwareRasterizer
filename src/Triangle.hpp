@@ -12,7 +12,7 @@ class Triangle {
         Color p2Color;
         Color color;
 
-        
+
         // Points' and triangle's colors uninitialized
         Triangle(Point p0, Point p1, Point p2) : p0(p0), p1(p1), p2(p2) {
         }
