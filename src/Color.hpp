@@ -24,3 +24,4 @@ const Color lightPurple(190, 142, 190, 255);
 const Color teal(0,128,128, 255);
 const Color navy(0,0,128, 255);
 const Color lightpink(255, 179, 222, 255);
+const Color orange(255, 165, 0, 255);
