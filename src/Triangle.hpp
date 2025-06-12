@@ -32,6 +32,12 @@ class Triangle {
             float x2, float y2, 
             Color triangleColor)
             : Triangle(Point(x0, y0), Point(x1, y1), Point(x2, y2), triangleColor ) { /* Empty constructor body */ }
+        
+        Triangle(
+            float x0, float y0,
+            float x1, float y1,
+            float x2, float y2
+        ) : Triangle(x0, y0, x1, y1, x2, y2, black) {}
 
         // Each point has its own color and the triangle has a color
         Triangle(float x0, float y0, Color p0Color, 
@@ -50,4 +56,5 @@ class Triangle {
 
             this->color = triangleColor;
         }
+
 };
