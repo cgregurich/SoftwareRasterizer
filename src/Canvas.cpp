@@ -4,6 +4,17 @@ void Canvas::save() {
     this->image.write_tga_file(this->imageFileName.c_str());
 }
 
+void Canvas::update() {
+    SDL_UpdateWindowSurface(this->window);
+}
+
+void Canvas::setPixel(int x, int y, Color color) {
+    SDL_Surface* windowSurface = this->getWindowSurface();
+    uint32_t* pixels = (uint32_t*)windowSurface->pixels;
+    int pixelIndex = windowSurface->w * y + x;
+    pixels[pixelIndex] = 0xff0000; // todo use color args
+}
+
 // todo optimization opportunity: take args by reference
 void Canvas::drawLine(Point a, Point b, CoordinateType coordType, Color color) {
     // This version does everything in one function
@@ -348,6 +359,21 @@ void Canvas::drawGrid(int gridResolution) {
     /* These negative values are deliberately outside of the screen's bounds */
     drawLine(0.5, -0.1, 0.5, 1.1, CoordinateType::NormalizedScreen, yAxisColor);
     drawLine(-0.1, 0.5, 1.1, 0.5, CoordinateType::NormalizedScreen, xAxisColor);
+}
+
+
+
+/*=========================================================
+PRIVATE METHODS
+=========================================================*/
+SDL_Window* Canvas::createWindow() {
+    SDL_Window* window = SDL_CreateWindow("Software Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, this->width, this->height, SDL_WINDOW_SHOWN);
+    return window;
+}
+
+SDL_Surface* Canvas::getWindowSurface() {
+    SDL_Surface* surface = SDL_GetWindowSurface(this->window);
+    return surface;
 }
 
 

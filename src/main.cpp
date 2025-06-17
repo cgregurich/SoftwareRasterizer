@@ -1,15 +1,18 @@
 
+#include <SDL.h>
 #include <iostream>
 #include <vector>
 #include <sstream>
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 
 #include "Matrix.hpp"
 #include "CoordinateSpaces.hpp"
 #include "Vec.hpp"
 #include "Triangle.hpp"
 #include "Canvas.hpp"
+
 
 Triangle transformTriangle(const Triangle& triangle, const Matrix<double>& transformMatrix) {
     Vec4 a(triangle.p0, 1);
@@ -267,7 +270,8 @@ Triangle rotateTriangleX(Triangle t, int degrees) {
     return rotated;
 }
 
-int main(int argc, char** argv) {
+// int main(int argc, char** argv) {
+int main(int argc, char* args[]) {
 
     /* todos 3/16: 
     - Some sort of enum for triangle fill type to replace the three outline + fill + lerp args?
@@ -345,23 +349,47 @@ int main(int argc, char** argv) {
     // WILO:  6/11: got proper face parsing implemented so I can draw that head properly and rotate it and shit!! looks sick as hell
     // next step is to figure out how world space and view space etc. work so I can draw other obj files.
     // Then work on windonewTriangle can actually animate shit!!!=very cool.
-    Canvas canvas("output.tga", 1000, 1000, TGAImage::RGB);
-    canvas.fillCanvas(white);
-    std::vector<Triangle> headTriangles = drawObj("obj/head.obj");
-    for (auto triangle : headTriangles) {
-        Triangle newTriangle = rotateTriangleY(triangle, 45);
-        // newTriangle = rotateTriangleX(triangle, -45);
-        canvas.drawTriangle(newTriangle, CoordinateType::NDC, true, false, false);
-    }
-    // drawObj("obj/simple.obj", CoordinateType::NDC);
+    // Canvas canvas("output.tga", 1000, 1000, TGAImage::RGB);
+    // canvas.fillCanvas(white);
+    // std::vector<Triangle> headTriangles = drawObj("obj/head.obj");
+    // for (auto triangle : headTriangles) {
+    //     Triangle newTriangle = rotateTriangleY(triangle, 45);
+    //     // newTriangle = rotateTriangleX(triangle, -45);
+    //     canvas.drawTriangle(newTriangle, CoordinateType::NDC, true, false, false);
+    // }
+    // // drawObj("obj/simple.obj", CoordinateType::NDC);
 
-    canvas.save();
+    // canvas.save();
     
 
 
+    // SDL_Window* window = SDL_CreateWindow("Software Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
+
+    SDL_Init(SDL_INIT_VIDEO); // todo curious what the other possible args are for this?
+
+    Canvas canvas(500, 500);
+
+    SDL_Event e;
+    bool running = true;
+    auto start = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed;
+    canvas.setPixel(200, 200, red);
+    canvas.update();
+    while (running) {
+        auto end = std::chrono::high_resolution_clock::now();
+        elapsed = end - start;
+        // if (elapsed % 1  0) {
+        //     canvas.update();
+        // }
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) running = false;
+        }
+        // todo temp timeout to avoid infinite loop that can't be exited
+        if (elapsed.count() > 5) running = false;
+    }
 
 
-
+    SDL_Quit();
 
    
     

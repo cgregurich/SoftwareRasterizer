@@ -6,6 +6,7 @@
 #include <array>
 #include "tgaimage.h"
 #include <string>
+#include <SDL.h>
 
 // todo remove uses of these and delete
 #define DEFAULT_COLOR black
@@ -14,15 +15,25 @@
 
 class Canvas {
     public:
-        Canvas(std::string imageFileName, int width, int height, int bpp) {
+        // old constructor for writing to an image instead of using SDL
+        // Canvas(std::string imageFileName, int width, int height, int bpp) {
+        //     // todo everything but window should be deprecated
+        //     this->width = width;
+        //     this->height = height;
+        //     this->image = TGAImage(width, height, bpp);
+        //     this->imageFileName = imageFileName;
+        //     this->window = createWindow();
+        // }
+        Canvas(int width, int height) {
             this->width = width;
             this->height = height;
-            this->image = TGAImage(width, height, bpp);
-            this->imageFileName = imageFileName;
+            this->window = createWindow();
         }
-        void save();
+        void save(); // todo deprecated? Or at least not updated to do SDL stuff
+        void update();
         // todo remove overloaded functions? they kind of just clutter the API
         
+        void setPixel(int x, int y, Color color);
         void drawLine(Point a, Point b, CoordinateType coordType, Color color);
         void drawLine(Point a, Point b, CoordinateType coordType);
         void drawLine(float x0, float y0, float x1, float y1, CoordinateType coordType, Color color);
@@ -40,11 +51,16 @@ class Canvas {
 
 
 
+
     private:
         std::string imageFileName;
         TGAImage image;
         int width;
         int height;
+        SDL_Window* window;
+
+        SDL_Window* createWindow();
+        SDL_Surface* getWindowSurface();
 };
 
 /*=============================

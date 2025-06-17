@@ -4,9 +4,10 @@ SRCS = SDLSandbox.cpp
 # OBJ_NAME specifies the name of our executable
 OBJ_NAME = ../build/SDLSandbox
 
-INCLUDE_PATHS = -IC:/Users/gregurichcoli/graphics-learning/SoftwareRasterizer/SDL2/include/SDL2
+# INCLUDE_PATHS = -IC:/Users/gregurichcoli/graphics-learning/SoftwareRasterizer/SDL2/include/SDL2
+INCLUDE_PATHS = -IC:/Users/colin/code/SoftwareRasterizer/SDL2/include/SDL2
 
-LIBRARY_PATHS = -LC:/Users/gregurichcoli/graphics-learning/SoftwareRasterizer/SDL2/lib
+LIBRARY_PATHS = -LC:/Users/colin/code/SoftwareRasterizer/SDL2/lib
 
 COMPILER_FLAGS = -w -Wl,-subsystem,windows
 
