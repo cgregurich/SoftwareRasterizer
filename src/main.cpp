@@ -365,33 +365,102 @@ int main(int argc, char* args[]) {
 
     // SDL_Window* window = SDL_CreateWindow("Software Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
 
-    SDL_Init(SDL_INIT_VIDEO); // todo curious what the other possible args are for this?
+    // todo curious what the other possible args are for this?
+    SDL_Init(SDL_INIT_VIDEO); 
 
-    Canvas canvas(500, 500);
 
-    SDL_Event e;
+    int width = 500;
+    int height = 500;
+    Canvas canvas(width, height);
+
+    SDL_Event event;
     bool running = true;
-    auto start = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed;
-    canvas.setPixel(200, 200, red);
+
+    auto start = std::chrono::steady_clock::now();
+    int timeBetweenUpdates = 16;
+    auto nextUpdate = start + std::chrono::milliseconds(timeBetweenUpdates);
+
+
+    Point pixelPos(width / 2, height / 2);
+
+    canvas.fill(green);
+    // canvas.setPixel(pixelPos.x, pixelPos.y, black);
+
+    std::vector<Triangle> objTriangles = drawObj("obj/head.obj");
+    for (auto triangle : objTriangles) {
+        // Triangle rotatedTriangle = rotateTriangleZ(triangle, 45);
+        // canvas.drawTriangle(rotatedTriangle, CoordinateType::NDC, true, false, false);
+        canvas.drawTriangle(triangle, CoordinateType::NDC, true, false, false);
+    }
+
+
+
+    int speed = 5;
+
+    int rotationSpeed = 1;
+    int degrees = 0;
+
+    int rotationAboutX = 0;
+    int rotationAboutY = 0;
+
     canvas.update();
+    /*
+    really random idea but what would it look like if each triangle of an object
+    was rotated out of sync, so like one triangle rotated each frame instead of all per frame?
+    */
     while (running) {
-        auto end = std::chrono::high_resolution_clock::now();
-        elapsed = end - start;
-        // if (elapsed % 1  0) {
-        //     canvas.update();
-        // }
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) running = false;
+        auto now = std::chrono::steady_clock::now();
+        if (now >= nextUpdate) {
+            canvas.fill(green);
+            std::cout << "rotationAboutX: " << rotationAboutX << std::endl;
+            // degrees += rotationSpeed;
+            // if (degrees > 360) degrees = 0;
+
+            for (auto triangle : objTriangles) {
+                Triangle rotatedTriangle = rotateTriangleX(triangle, rotationAboutX);
+                rotatedTriangle = rotateTriangleY(rotatedTriangle, rotationAboutY);
+                canvas.drawTriangle(rotatedTriangle, CoordinateType::NDC, true, false, false);
+            }
+
+            canvas.update();
+
+            nextUpdate += std::chrono::milliseconds(timeBetweenUpdates);
         }
-        // todo temp timeout to avoid infinite loop that can't be exited
-        if (elapsed.count() > 5) running = false;
+
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) running = false;
+            else if (event.type == SDL_KEYDOWN) {
+                SDL_Keycode key = event.key.keysym.sym;
+                if (key == SDLK_ESCAPE) {
+                    running = false;
+                }
+                if (key == SDLK_UP) {
+                    rotationAboutX -= 1;
+                }
+                if (key == SDLK_DOWN) {
+                    rotationAboutX += 1;
+                }
+                // todo rotation about Y axis is not working as expected lol
+                // if (key == SDLK_LEFT) {
+                //     rotationAboutY -= 1;
+                // }
+                // if (key == SDLK_RIGHT) {
+                //     rotationAboutY += 1;
+                // }
+            }
+        }
     }
 
 
     SDL_Quit();
 
-   
+
+    /*
+    TODO:
+    - rotationAboutY() doesn't seem to work
+    - segmentation fault when rotating object 2 ticks past starting point??
+    - makefile error when doing make run?
+    */
     
 
     return 0;

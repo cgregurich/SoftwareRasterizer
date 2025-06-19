@@ -45,7 +45,7 @@ class Canvas {
         void drawCoordinatePlane();
         void drawGrid(int gridResolution);
         
-        void fillCanvas(Color color);
+        void fill(Color color);
         void fillTriangle(const Triangle t, const CoordinateType coordType, const bool lerp);
 
 

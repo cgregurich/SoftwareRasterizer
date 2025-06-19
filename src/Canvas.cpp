@@ -1,5 +1,6 @@
 #include "Canvas.hpp"
 
+// todo deprecate due to now using SDL
 void Canvas::save() {
     this->image.write_tga_file(this->imageFileName.c_str());
 }
@@ -12,7 +13,7 @@ void Canvas::setPixel(int x, int y, Color color) {
     SDL_Surface* windowSurface = this->getWindowSurface();
     uint32_t* pixels = (uint32_t*)windowSurface->pixels;
     int pixelIndex = windowSurface->w * y + x;
-    pixels[pixelIndex] = 0xff0000; // todo use color args
+    pixels[pixelIndex] = color.val; // todo use color args
 }
 
 // todo optimization opportunity: take args by reference
@@ -20,19 +21,16 @@ void Canvas::drawLine(Point a, Point b, CoordinateType coordType, Color color) {
     // This version does everything in one function
     // instead of using helper functions for high vs low lines
 
-    int width = image.get_width();
-    int height = image.get_height();
-
     /* We want the coordinates to be in Screen space for the line drawing logic */
     if (coordType == CoordinateType::NormalizedScreen) {
-        a.x *= width;
-        a.y *= height;
-        b.x *= width;
-        b.y *= height;
+        a.x *= this->width;
+        a.y *= this->height;
+        b.x *= this->width;
+        b.y *= this->height;
     }
     else if (coordType == CoordinateType::NDC) {
-        a = NDCToScreen(a, width, height);
-        b = NDCToScreen(b, width, height);
+        a = NDCToScreen(a, this->width, this->height);
+        b = NDCToScreen(b, this->width, this->height);
     }
 
     int x0, x1, y0, y1;
@@ -50,7 +48,7 @@ void Canvas::drawLine(Point a, Point b, CoordinateType coordType, Color color) {
     int y = y0;
 
     while (true) {
-        image.set(x, y, color);
+        this->setPixel(x, y, color);
         if (x == x1 && y == y1) break;
         int e2 = 2 * error;
         if (e2 >= dy) {
@@ -79,10 +77,10 @@ void Canvas::drawLine(float x0, float y0, float x1, float y1, CoordinateType coo
     drawLine(x0, y0, x1, y1, coordType, DEFAULT_COLOR);
 }
 
-void Canvas::fillCanvas(Color color) {
-    for (int x=0; x<=image.get_width(); x++) {
-        for (int y=0; y<=image.get_height(); y++) {
-            image.set(x, y, color);
+void Canvas::fill(Color color) {
+    for (int x=0; x<=this->width; x++) {
+        for (int y=0; y<=this->height; y++) {
+            this->setPixel(x, y, color);
         }
     }
 }
@@ -93,12 +91,12 @@ void Canvas::fillTriangle(const Triangle t, const CoordinateType coordType, cons
     
     /* We want to work with screen coordinates for barycentric calculations */
     if (coordType == CoordinateType::NormalizedScreen) {
-        tCopy.p0.x *= image.get_width();
-        tCopy.p0.y *= image.get_height();
-        tCopy.p1.x *= image.get_width();
-        tCopy.p1.y *= image.get_height();
-        tCopy.p2.x *= image.get_width();
-        tCopy.p2.y *= image.get_height();
+        tCopy.p0.x *= this->width;
+        tCopy.p0.y *= this->height;
+        tCopy.p1.x *= this->width;
+        tCopy.p1.y *= this->height;
+        tCopy.p2.x *= this->width;
+        tCopy.p2.y *= this->height;
     }
     else if (coordType == CoordinateType::NDC) {
         tCopy.p0 = NDCToScreen(tCopy.p0, this->width, this->height);
@@ -123,17 +121,21 @@ void Canvas::fillTriangle(const Triangle t, const CoordinateType coordType, cons
                     // Then blend that color with C
                     newColor = blendColors(newColor, t.p2Color, 1-barycentric.z, barycentric.z);
 
-                    image.set(p.x, p.y, newColor);
+                    this->setPixel(p.x, p.y, newColor);
                 }
                 else { // If lerp is false then just use the triangle's overall color
                     // Blend color with bg (only has an effect if triangle's color has some transparency)
                     // Try blending with background??
-                    Color bg = image.get(p.x, p.y);
-                    float fgWeight = tCopy.color.a / 255.0;
-                    float bgWeight = 1 - fgWeight;
-                    Color newColor = blendColors(tCopy.color, bg, fgWeight, bgWeight);
+                    // todo need to fix this so it works with SDL stuff; haven't messed with alpha values at all yet
+                    // nor do I have the functionality to get the color of a given pixel
+                    std::cout << "\n\nWARNING: still need to implement blending with the background color" << std::endl;
+                    // Color bg = image.get(p.x, p.y);
+                    // float fgWeight = tCopy.color.a / 255.0;
+                    // float bgWeight = 1 - fgWeight;
+                    // Color newColor = blendColors(tCopy.color, bg, fgWeight, bgWeight);
+                    Color newColor = tCopy.color; // todo for now just using the triangles color and not blending anything
 
-                    image.set(p.x, p.y, newColor);
+                    this->setPixel(p.x, p.y, newColor);
                 }
             }
 
@@ -195,7 +197,7 @@ void Canvas::drawPoint(Point p, Color color, CoordinateType coordType) {
             break;
     }
     std::cout << "Drawing point @ (" << x << ", " << y << ")" << std::endl;
-    image.set(screenCoords.x, screenCoords.y, color);
+    this->setPixel(screenCoords.x, screenCoords.y, color);
 }
 
 
@@ -291,7 +293,7 @@ void Canvas::drawCoordinatePlane() {
 
 
 void Canvas::drawGrid(int gridResolution) {
-    fillCanvas(white);
+    fill(white);
     /* Colors to use throughout */
     Color tickColor(200, 200, 200, 255); // Color to use for grid lines/ticks
     Color xAxisColor(200, 0, 0, 255);
