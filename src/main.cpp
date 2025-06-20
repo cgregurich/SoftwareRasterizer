@@ -57,26 +57,6 @@ bool parseVertexFromObjLine(std::string rawLine, Vertex &vertex) {
     return true;
 }
 
-// bool parseFaceFromObjLine(const std::string rawLine, std::vector<int> &vertexIndices) {
-//     std::stringstream ss(rawLine);
-//     std::string keyword;
-//     ss >> keyword;
-//     if (keyword != "f") return false;
-
-//     /* Parse vertex indices from line */
-//     /* Line example:
-//     f 24/1/25 25/2/25 26/3/26
-//     */
-//     int a, b, c;
-//     ss >> a >> b >> c;
-
-//     vertexIndices[0] = a;
-//     vertexIndices[1] = b;
-//     vertexIndices[2] = c;
-
-//     return true;
-// }
-
 // todo: implement grabbing textureIndices and normalVertices; it's 25% there but just not worrying about it because I'm not using those things yet; really main thing missing is simply that drawObj() doesn't has std::vectors for texture or normal indices.
 bool parseFaceFromObjLine(const std::string rawLine, std::vector<int> &vertexIndices) {
     /*
@@ -160,14 +140,15 @@ std::vector<Triangle> drawObj(const std::string filepath ) {
     file.clear(); 
     file.seekg(0);
 
-    std::vector<int> vertexIndices(3);
+    std::vector<int> vertexIndices;
+    vertexIndices.reserve(3);
     int faceCounter = 0; /* For debugging/seeing progress */
     while (std::getline(file, line)) {
         if (parseFaceFromObjLine(line, vertexIndices)) {
-            // todo this is just for debugging/seeing progress
+
+            /* For debugging/seeing progress */
             faceCounter++;
             if (faceCounter % 100 == 0) std::cout << "faceCounter=" << faceCounter << std::endl;
-            // todo end
 
             int v1Index, v2Index, v3Index;
             v1Index = vertexIndices[0];
@@ -180,17 +161,10 @@ std::vector<Triangle> drawObj(const std::string filepath ) {
             v2 = vertices[v2Index-1];
             v3 = vertices[v3Index-1];
 
-            /* Need to convert to screen coords if the input is NDC */
-            // todo fix this. We don't want to depend on WIDTH and HEIGHT since width and height has been moved to the Canvas class
-            // if (coordType == CoordinateType::NDC) {
-            //     v1 = NDCToNormalizedScreen(v1, WIDTH, HEIGHT);
-            //     v2 = NDCToNormalizedScreen(v2, WIDTH, HEIGHT);
-            //     v3 = NDCToNormalizedScreen(v3, WIDTH, HEIGHT);
-            // }
+
 
             Triangle t(v1, v2, v3);
             triangles.push_back(t);
-            // drawTriangle(t, CoordinateType::NormalizedScreen, true, true, false);
         }
     }
 
@@ -241,7 +215,7 @@ Triangle rotateTriangleY(Triangle t, int degrees) {
     b = matrix * b;
     c = matrix * c;
 
-    Triangle rotated(a.x, a.y, b.x, b.y, c.x, c.y);
+    Triangle rotated(a.x, a.y, b.x, b.y, c.x, c.y, t.color);
 
     return rotated;
 }
@@ -265,9 +239,86 @@ Triangle rotateTriangleX(Triangle t, int degrees) {
     b = matrix * b;
     c = matrix * c;
 
-    Triangle rotated(a.x, a.y, b.x, b.y, c.x, c.y);
+    Triangle rotated(a.x, a.y, b.x, b.y, c.x, c.y, t.color);
 
     return rotated;
+}
+
+#include <random>
+/*
+Used to give lines random colors to better visualize how "3D" objects are rotating
+*/
+Color randomColor() {
+    std::vector<Color> choices = {
+        red, green, blue, white
+    };
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distr(0, choices.size());
+    return choices[distr(gen)];
+
+}
+
+Vec4 projectVertex(Vec3 v) {
+    int width = 500;
+    int height = 500;
+    float aspect = width / height;
+    float fov = 90.0f;
+    float near = 0.1f;
+    float far = 1000.0f;
+
+    float f = 1.0f / tan(fov * 0.5f * (M_PI / 180.0f));
+    float zRange = near - far;
+
+    // todo: chatgpt's projection matrix; don't know enough to know if it's fucky or not
+    // Matrix<double> projectionMatrix({
+    //     { f/aspect,  0,   0,                     0                       },
+    //     { 0,         f,   0,                     0                       },
+    //     { 0,         0,   (far + near)/zRange,   2 * far * near / zRange },
+    //     { 0,         0,   -1,                    0                       }
+    // });
+    WILO: okay some fucky shit is going on with this projection matrix. I need to spend a significant time actually understanding
+    all of it so that I can debug it and actually understand it. Otherwise I'm just plugging shit in and hoping it will poop out gold. Silly!
+    Matrix<double> projectionMatrix({
+        { 1/(aspect*tan(fov/2)),   0,              0,                           0                        },
+        {0,                        1/tan(fov/2),   0,                           0                        },
+        {0,                        0,              -(far+near)/(far-near),      -(2*far*near)/(far-near) },
+        {0,                        0,              1,                           0                        }
+    });
+
+    Vec4 projected(v, 1.0);
+
+    projected = projectionMatrix * projected;
+
+    projected.x /= projected.w;
+    projected.y /= projected.w;
+    projected.z /= projected.w;
+    projected.w /= projected.w;
+
+    return projected;
+
+
+}
+
+Triangle projectTriangle(Triangle& t) {
+    std::cout << "projectTriangle\n";
+    std::cout << "triangle points: \n";
+    std::cout << t.p0 << std::endl;
+    std::cout << t.p1 << std::endl;
+    std::cout << t.p2 << std::endl;
+    Vec4 a, b, c;
+    a = projectVertex(t.p0);
+    b = projectVertex(t.p1);
+    c = projectVertex(t.p2);
+    std::cout << "projected points: \n";
+    std::cout << a << std::endl;
+    std::cout << b << std::endl;
+    std::cout << c << std::endl;
+    std::cout << std::endl;
+    
+    Triangle projected(a.x, a.y, b.x, b.y, c.x, c.y, t.color);
+    return projected;
+
 }
 
 // int main(int argc, char** argv) {
@@ -377,55 +428,69 @@ int main(int argc, char* args[]) {
     bool running = true;
 
     auto start = std::chrono::steady_clock::now();
-    int timeBetweenUpdates = 16;
-    auto nextUpdate = start + std::chrono::milliseconds(timeBetweenUpdates);
+    int fps = 1000;
+    int msBetweenUpdates = 1000 / fps;
+    auto nextUpdate = start + std::chrono::milliseconds(msBetweenUpdates);
 
 
-    Point pixelPos(width / 2, height / 2);
-
-    canvas.fill(green);
-    // canvas.setPixel(pixelPos.x, pixelPos.y, black);
-
-    std::vector<Triangle> objTriangles = drawObj("obj/head.obj");
-    for (auto triangle : objTriangles) {
-        // Triangle rotatedTriangle = rotateTriangleZ(triangle, 45);
-        // canvas.drawTriangle(rotatedTriangle, CoordinateType::NDC, true, false, false);
-        canvas.drawTriangle(triangle, CoordinateType::NDC, true, false, false);
-    }
+    const Color BG_COLOR = gray;
+    canvas.fill(BG_COLOR);
 
 
-
-    int speed = 5;
-
-    int rotationSpeed = 1;
-    int degrees = 0;
 
     int rotationAboutX = 0;
     int rotationAboutY = 0;
 
-    canvas.update();
+
+    Vec3 v(0.0, 100.0, 0.0);
+    Vec4 projected = projectVertex(v);
+    std::cout << v << std::endl;
+    std::cout << projected << std::endl;
+
+
+
+    // std::vector<Triangle> objTriangles = drawObj("obj/sphere.obj");
+    // std::vector<Triangle> objTriangles = drawObj("obj/sphere_modelspace.obj");
+    // for (auto& triangle : objTriangles) {
+    //     triangle.color = randomColor();
+    //     std::cout << triangle.p0 << std::endl;
+    //     triangle = projectTriangle(triangle);
+    //     std::cout << triangle.p0 << std::endl;
+    //     canvas.drawTriangle(triangle, CoordinateType::NDC, true, false, false);
+    // }
+
+    return 0;
+    // std::string line = "f 3657 2197 3";
+    // std::vector<int> vertexIndices;
+    // vertexIndices.reserve(3);
+    // parseFaceFromObjLine(line, vertexIndices);
+    // for (auto vertexIndex : vertexIndices) {
+    //     std::cout << vertexIndex << std::endl;
+    // }
+
+
+    // canvas.update();
     /*
     really random idea but what would it look like if each triangle of an object
     was rotated out of sync, so like one triangle rotated each frame instead of all per frame?
     */
+    running = false;
     while (running) {
         auto now = std::chrono::steady_clock::now();
-        if (now >= nextUpdate) {
-            canvas.fill(green);
-            std::cout << "rotationAboutX: " << rotationAboutX << std::endl;
-            // degrees += rotationSpeed;
-            // if (degrees > 360) degrees = 0;
+        // if (now >= nextUpdate) {
+        //     canvas.fill(BG_COLOR);
+        //     std::cout << "rotationAboutX: " << rotationAboutX << std::endl;
 
-            for (auto triangle : objTriangles) {
-                Triangle rotatedTriangle = rotateTriangleX(triangle, rotationAboutX);
-                rotatedTriangle = rotateTriangleY(rotatedTriangle, rotationAboutY);
-                canvas.drawTriangle(rotatedTriangle, CoordinateType::NDC, true, false, false);
-            }
+        //     for (auto triangle : objTriangles) {
+        //         Triangle rotatedTriangle = rotateTriangleX(triangle, rotationAboutX);
+        //         rotatedTriangle = rotateTriangleY(rotatedTriangle, rotationAboutY);
+        //         canvas.drawTriangle(rotatedTriangle, CoordinateType::NDC, true, false, false);
+        //     }
 
-            canvas.update();
+        //     canvas.update();
 
-            nextUpdate += std::chrono::milliseconds(timeBetweenUpdates);
-        }
+        //     nextUpdate += std::chrono::milliseconds(msBetweenUpdates);
+        // }
 
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = false;
@@ -441,13 +506,31 @@ int main(int argc, char* args[]) {
                     rotationAboutX += 1;
                 }
                 // todo rotation about Y axis is not working as expected lol
-                // if (key == SDLK_LEFT) {
-                //     rotationAboutY -= 1;
-                // }
-                // if (key == SDLK_RIGHT) {
-                //     rotationAboutY += 1;
-                // }
+                if (key == SDLK_LEFT) {
+                    rotationAboutY -= 1;
+                }
+                if (key == SDLK_RIGHT) {
+                    rotationAboutY += 1;
+                }
             }
+            else if(event.type == SDL_MOUSEMOTION) {
+                if (event.motion.state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+                    std::cout << "mouse" << std::endl;
+                    int dx = event.motion.xrel;
+                    int dy = event.motion.yrel;
+                    int sensitivity = 1;
+                    rotationAboutX += dy * sensitivity;
+                    rotationAboutY += dx * sensitivity;
+                }
+            }
+                // if (event.type == SDL_MOUSEMOTION) {
+                    // int dx = event.motion.xrel;
+                    // int dy = event.motion.yrel;
+                    // std::cout << "dx: " << dx << std::endl;
+                    // int sensitivity = 4;
+                    // rotationAboutY += dx * sensitivity;
+                    // rotationAboutX += dy * sensitivity;
+                // }
         }
     }
 
@@ -460,6 +543,25 @@ int main(int argc, char* args[]) {
     - rotationAboutY() doesn't seem to work
     - segmentation fault when rotating object 2 ticks past starting point??
     - makefile error when doing make run?
+    - So I imagine the reason why rotating about the Y axis doesn't work is 
+        because I haven't actually implemented *anything* to do with the Z value of
+        a vertex's position (????????????)
+
+
+    Q: If I set Z equal to 0 in parseVertexFromObjLine(), then run the code with
+        rotateTriangleX, I get the same effect as I had with rotateTriangleY.
+        I don't understand why; I didn't think I did jack with the Z coordinate,
+        so how in the world does the head model, when rendered, have depth? Or
+        at least the *appearance* of depth??
+    A: Something to do with how the Z value of a vertex is used to modify the Y value when rotating about the Y axis.
+    This was checked by removing the third row of the rotation matrix--we currently get the exact same effect when this
+    row is removed. Because the third row is used to calculate the final Z value of the rotated matrix. However, removing
+    the Z coordinates from the .obj file DOES have an effect because the Z value is used as part of the calculation for
+    the rotated Y coordinate (i.e. second row times the vertex)
+    Which means the 3D rotating depth effect isn't due to the actual Z coordinates, but rather because of
+    the math behind how the Y value is changed when rotating.
+
+    Q: With the above being said, why does rotating about X not work? What's different there?
     */
     
 

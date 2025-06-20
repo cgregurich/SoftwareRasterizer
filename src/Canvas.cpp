@@ -13,7 +13,7 @@ void Canvas::setPixel(int x, int y, Color color) {
     SDL_Surface* windowSurface = this->getWindowSurface();
     uint32_t* pixels = (uint32_t*)windowSurface->pixels;
     int pixelIndex = windowSurface->w * y + x;
-    pixels[pixelIndex] = color.val; // todo use color args
+    pixels[pixelIndex] = color.val;
 }
 
 // todo optimization opportunity: take args by reference
@@ -128,7 +128,7 @@ void Canvas::fillTriangle(const Triangle t, const CoordinateType coordType, cons
                     // Try blending with background??
                     // todo need to fix this so it works with SDL stuff; haven't messed with alpha values at all yet
                     // nor do I have the functionality to get the color of a given pixel
-                    std::cout << "\n\nWARNING: still need to implement blending with the background color" << std::endl;
+                    // std::cout << "\n\nWARNING: still need to implement blending with the background color" << std::endl;
                     // Color bg = image.get(p.x, p.y);
                     // float fgWeight = tCopy.color.a / 255.0;
                     // float bgWeight = 1 - fgWeight;
@@ -369,7 +369,8 @@ void Canvas::drawGrid(int gridResolution) {
 PRIVATE METHODS
 =========================================================*/
 SDL_Window* Canvas::createWindow() {
-    SDL_Window* window = SDL_CreateWindow("Software Rasterizer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, this->width, this->height, SDL_WINDOW_SHOWN);
+    // 1920 + 800 to put it on the right monitor
+    SDL_Window* window = SDL_CreateWindow("Software Rasterizer", 1920+800, SDL_WINDOWPOS_UNDEFINED, this->width, this->height, SDL_WINDOW_SHOWN);
     return window;
 }
 
